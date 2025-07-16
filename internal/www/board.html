@@ -1,0 +1,26 @@
+<div id="board">
+    <span></span>
+    {{ range $j, $file := files }}
+    <span>{{ $file }}</span>
+    {{ end}}
+    <span></span>
+    <!-- board tiles -->
+    {{ range $i, $rank := ranks }}
+    <span>{{ $rank }}</span>
+    {{ range $j, $file := files }}
+    <div class="tile {{ color $i $j}} {{ $file }}{{ $rank }}">
+        {{ $pieceAt := pieceAt $ $j $i }}
+        {{ if $pieceAt}}
+        <img class="piece {{ $file }}{{ $rank }}" src="{{ $pieceAt }}" draggable="false">
+        {{ end }}
+    </div>
+    {{ end}}
+    <span>{{ $rank }}</span>
+    {{ end}}
+    <!-- after board tiles: -->
+    <span></span>
+    {{ range $j, $file := files }}
+    <span>{{ $file }}</span>
+    {{ end}}
+    <span></span>
+</div>

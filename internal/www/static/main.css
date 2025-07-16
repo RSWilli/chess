@@ -1,0 +1,46 @@
+body {
+    margin: 0;
+    background-color: rgb(255, 249, 243);
+    user-select: none;
+}
+
+#board {
+    display: grid;
+    aspect-ratio: 1;
+    margin: auto;
+
+    width: 100vmin;
+    height: 100vmin;
+
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: repeat(10, 1fr);
+}
+
+.tile {
+    position: relative;
+    aspect-ratio: 1;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.piece {
+    height: 95%;
+    cursor: pointer;
+}
+
+.black {
+    background-color: hsl(19, 17%, 35%);
+}
+
+.white {
+    background-color: hsl(33, 20%, 75%);
+}
+
+span {
+    display: flex;
+    font-size: 40px;
+    justify-content: center;
+    align-items: center;
+}
