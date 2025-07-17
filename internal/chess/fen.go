@@ -126,7 +126,7 @@ func NewBoardFromFEN(in string) (*Board, error) {
 	if parts[3] == "-" {
 		b.EnPassantTarget = InvalidSquare
 	} else {
-		tile, err := ParseTile(parts[3])
+		tile, err := ParseSquare(parts[3])
 
 		if err != nil {
 			return nil, fmt.Errorf("%w: failed to parse en passant target square %w", ErrMalformedFEN, err)

@@ -14,7 +14,7 @@ func TestParseTile(t *testing.T) {
 	}
 
 	for _, square := range squares {
-		tile, err := chess.ParseTile(square)
+		tile, err := chess.ParseSquare(square)
 
 		if err != nil {
 			t.Fatal(err)

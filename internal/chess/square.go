@@ -54,7 +54,7 @@ func (t Square) Index() int {
 	return int(t.Rank)*8 + int(t.File)
 }
 
-func ParseTile(square string) (Square, error) {
+func ParseSquare(square string) (Square, error) {
 	if len(square) != 2 {
 		return Square{}, fmt.Errorf("invalid tile %s", square)
 	}

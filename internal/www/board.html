@@ -8,10 +8,10 @@
     {{ range $i, $rank := ranks }}
     <span>{{ $rank }}</span>
     {{ range $j, $file := files }}
-    <div class="tile {{ color $i $j}} {{ $file }}{{ $rank }}">
+    <div class="tile {{ color $i $j}}" data-square="{{ $file }}{{ $rank }}">
         {{ $pieceAt := pieceAt $ $j $i }}
         {{ if $pieceAt}}
-        <img class="piece {{ $file }}{{ $rank }}" src="{{ $pieceAt }}" draggable="false">
+        <img class="piece" src="{{ $pieceAt }}" draggable="false">
         {{ end }}
     </div>
     {{ end}}

@@ -39,5 +39,12 @@ function connectWebSocket() {
 connectWebSocket()
 
 document.body.addEventListener("click", ev => {
-    console.log(ev.target)
+    /**
+     * @type {HTMLElement | null}
+     */
+    const el = ev.target
+
+    if (!el) return
+
+    console.log(el.dataset.square)
 })

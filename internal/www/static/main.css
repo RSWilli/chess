@@ -23,11 +23,13 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+
+    cursor: pointer;
 }
 
 .piece {
     height: 95%;
-    cursor: pointer;
+    pointer-events: none;
 }
 
 .black {
