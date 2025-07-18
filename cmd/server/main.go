@@ -1,17 +1,19 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 
+	"github.com/rswilli/chess/internal/chess"
 	"github.com/rswilli/chess/internal/game"
 	"github.com/rswilli/chess/internal/www"
 	"golang.org/x/net/websocket"
 )
 
 func main() {
-	state := game.New()
+	game := game.New()
 
 	mux := http.NewServeMux()
 
@@ -21,8 +23,8 @@ func main() {
 		},
 		Handler: websocket.Handler(func(ws *websocket.Conn) {
 			slog.Info("subscribing to events")
-			events := state.Subscribe()
-			defer state.Unsubscribe(events)
+			events := game.Subscribe()
+			defer game.Unsubscribe(events)
 
 			done := make(chan struct{})
 
@@ -33,10 +35,15 @@ func main() {
 			}()
 
 			for {
-				boardData := www.Render(state.Board())
-				// needs to happen as a single call to write otherwise we create multiple
-				// messages
-				ws.Write(boardData)
+				boardData, err := game.Render()
+
+				if err == nil {
+					// needs to happen as a single call to write otherwise we create multiple
+					// messages
+					ws.Write(boardData)
+				} else {
+					slog.Error("error rendering board", "error", err)
+				}
 
 				select {
 				case <-ws.Request().Context().Done():
@@ -50,9 +57,22 @@ func main() {
 		}),
 	}
 
+	mux.HandleFunc("PUT /square/{square}", func(w http.ResponseWriter, r *http.Request) {
+		sq := r.PathValue("square")
+
+		square, err := chess.ParseSquare(sq)
+
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Invalid square given: %v", err), http.StatusBadRequest)
+			return
+		}
+
+		game.DoSquare(square)
+	})
+
 	mux.Handle("GET /websocket", ws)
 
-	mux.Handle("GET /", www.Handler(state))
+	mux.Handle("GET /", www.StaticServer)
 
 	serv := http.Server{
 		Addr:    ":3000",

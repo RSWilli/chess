@@ -4,62 +4,48 @@ import (
 	"bytes"
 	"embed"
 	"html/template"
-	"io"
-	"log/slog"
 	"net/http"
 
 	"github.com/rswilli/chess/internal/chess"
-	"github.com/rswilli/chess/internal/game"
 )
 
-//go:embed all:static
+//go:embed index.html static/*
 var static embed.FS
+var StaticServer = http.FileServerFS(static)
 
-//go:embed *.html
-var htmlFiles embed.FS
-var templates = template.Must(template.New("main").Funcs(funcMap).ParseFS(htmlFiles, "*.html"))
+//go:embed board.tpl.html
+var boardTpl string
+var boardTemplate = template.Must(template.New("main").Funcs(funcMap).Parse(boardTpl))
 
-func Render(board *chess.Board) []byte {
+func RenderBoard(data Data) ([]byte, error) {
 	buf := bytes.Buffer{}
-	templates.ExecuteTemplate(&buf, "board.html", board)
+	err := boardTemplate.Execute(&buf, data)
 
-	return buf.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
 
-func Handler(state *game.State) http.Handler {
-	staticServer := http.FileServerFS(static)
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		slog.Info("serving request", "path", r.URL.Path)
-
-		if r.URL.Path == "/" {
-			file, err := htmlFiles.Open("index.html")
-
-			if err != nil {
-				panic("could not open index")
-			}
-
-			io.Copy(w, file)
-
-			return
-		}
-
-		staticServer.ServeHTTP(w, r)
-	})
+type Data struct {
+	Board    *chess.Board
+	Selected chess.Square
 }
 
-var funcMap = template.FuncMap(map[string]any{
-	"ranks":   ranks,
-	"files":   files,
-	"color":   color,
-	"pieceAt": pieceAt,
-})
+// IsSelected is called by the template for ease of use
+func (d Data) IsSelected(fileIndex, rankIndex int) bool {
+	return d.Selected == chess.Square{
+		File: chess.File(fileIndex),
+		Rank: chess.Rank(rankIndex),
+	}
+}
 
 // pieceAt returns the URL of the image that is needed for the piece at file/rank or an empty string
-func pieceAt(board *chess.Board, file, rank int) string {
-	piece := board.Square(chess.Square{
-		File: chess.File(file),
-		Rank: chess.Rank(rank),
+func (d Data) PieceAt(fileIndex, rankIndex int) string {
+	piece := d.Board.Square(chess.Square{
+		File: chess.File(fileIndex),
+		Rank: chess.Rank(rankIndex),
 	})
 
 	if piece == chess.Empty {
@@ -68,6 +54,12 @@ func pieceAt(board *chess.Board, file, rank int) string {
 
 	return pieceImgSrc[piece]
 }
+
+var funcMap = template.FuncMap(map[string]any{
+	"ranks": ranks,
+	"files": files,
+	"color": color,
+})
 
 // ranks return the ranks of the board in the order they are needed in the HTML
 func ranks() []string {
@@ -80,8 +72,8 @@ func files() []string {
 }
 
 // color returns "black" or "white" depending on the given indices of the ranks and file lists
-func color(rank, file int) string {
-	if (rank+file)%2 == 1 {
+func color(rankIndex, fileIndex int) string {
+	if (rankIndex+fileIndex)%2 == 1 {
 		return "black"
 	}
 

@@ -46,5 +46,7 @@ document.body.addEventListener("click", ev => {
 
     if (!el) return
 
-    console.log(el.dataset.square)
+    fetch(`square/${el.dataset.square}`, {
+        method: "PUT",
+    })
 })

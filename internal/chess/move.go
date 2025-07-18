@@ -5,29 +5,24 @@ import (
 	"fmt"
 )
 
-type Promotion uint8
+type MoveSpecial uint8
 
 const (
-	NoPromote Promotion = iota
+	NoSpecial MoveSpecial = iota
+
 	PromoteQueen
 	PromoteRook
 	PromoteBishop
 	PromoteKnight
-)
 
-type Castling uint8
-
-const (
-	NoCastle Castling = iota
 	CastleLong
 	CastleShort
 )
 
 type Move struct {
-	From      Square
-	To        Square
-	Promotion Promotion
-	Castling  Castling
+	From    Square
+	To      Square
+	Special MoveSpecial
 }
 
 const castleShort = "O-O"
@@ -42,16 +37,16 @@ var InvalidMove = Move{From: InvalidSquare, To: InvalidSquare}
 func ParseMove(in string) (Move, error) {
 	if in == castleLong {
 		return Move{
-			From:     InvalidSquare,
-			To:       InvalidSquare,
-			Castling: CastleLong,
+			From:    InvalidSquare,
+			To:      InvalidSquare,
+			Special: CastleLong,
 		}, nil
 	}
 	if in == castleShort {
 		return Move{
-			From:     InvalidSquare,
-			To:       InvalidSquare,
-			Castling: CastleShort,
+			From:    InvalidSquare,
+			To:      InvalidSquare,
+			Special: CastleShort,
 		}, nil
 	}
 
@@ -72,22 +67,21 @@ func ParseMove(in string) (Move, error) {
 	}
 
 	m := Move{
-		From:      from,
-		To:        to,
-		Castling:  NoCastle,
-		Promotion: NoPromote,
+		From:    from,
+		To:      to,
+		Special: NoSpecial,
 	}
 
 	if len(in) == 5 {
 		switch in[4] {
 		case 'q':
-			m.Promotion = PromoteQueen
+			m.Special = PromoteQueen
 		case 'r':
-			m.Promotion = PromoteRook
+			m.Special = PromoteRook
 		case 'b':
-			m.Promotion = PromoteBishop
+			m.Special = PromoteBishop
 		case 'n':
-			m.Promotion = PromoteKnight
+			m.Special = PromoteKnight
 		default:
 			return InvalidMove, fmt.Errorf("%w: invalid promotion %c", ErrInvalidMove, in[4])
 		}
@@ -97,10 +91,10 @@ func ParseMove(in string) (Move, error) {
 }
 
 func (m Move) String() string {
-	if m.Castling == CastleLong {
+	if m.Special == CastleLong {
 		return castleLong
 	}
-	if m.Castling == CastleShort {
+	if m.Special == CastleShort {
 		return castleShort
 	}
 
@@ -109,7 +103,7 @@ func (m Move) String() string {
 	s += m.From.String()
 	s += m.To.String()
 
-	switch m.Promotion {
+	switch m.Special {
 	case PromoteBishop:
 		s += "b"
 	case PromoteKnight:

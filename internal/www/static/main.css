@@ -34,10 +34,22 @@ body {
 
 .black {
     background-color: hsl(19, 17%, 35%);
+
+    &.highlighted {
+        background-color: hsl(19, 17%, 25%);
+    }
 }
 
 .white {
     background-color: hsl(33, 20%, 75%);
+
+    &.highlighted {
+        background-color: hsl(33, 20%, 65%);
+    }
+}
+
+.highlighted {
+    box-shadow: 0 0 20px inset #0b5700;
 }
 
 span {

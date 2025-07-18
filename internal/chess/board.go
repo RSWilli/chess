@@ -58,8 +58,6 @@ func (b *Board) Square(sq Square) Piece {
 	return b.pos[sq.Index()]
 }
 
-func (b *Board) Copy() *Board {
-	c := *b
-
-	return &c
+func (b *Board) DoMove(m Move) {
+	b.pos[m.From.Index()], b.pos[m.To.Index()] = Empty, b.pos[m.From.Index()]
 }

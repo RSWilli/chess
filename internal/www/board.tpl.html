@@ -8,8 +8,12 @@
     {{ range $i, $rank := ranks }}
     <span>{{ $rank }}</span>
     {{ range $j, $file := files }}
-    <div class="tile {{ color $i $j}}" data-square="{{ $file }}{{ $rank }}">
-        {{ $pieceAt := pieceAt $ $j $i }}
+    {{ $classes := color $i $j }}
+    {{ if $.IsSelected $j $i }}
+    {{ $classes = printf "%s %s" $classes "highlighted"}}
+    {{ end }}
+    <div class="tile {{ $classes }}" data-square="{{ $file }}{{ $rank }}">
+        {{ $pieceAt := $.PieceAt $j $i }}
         {{ if $pieceAt}}
         <img class="piece" src="{{ $pieceAt }}" draggable="false">
         {{ end }}
