@@ -66,8 +66,24 @@ func ParseSquare(square string) (Square, error) {
 		return Square{}, fmt.Errorf("invalid tile %s", square)
 	}
 
+	return mkSquare(rank, file), nil
+}
+
+func mkSquare(rank, file int) Square {
 	return Square{
 		Rank: Rank(rank),
 		File: File(file),
-	}, nil
+	}
+}
+
+// indexToSquare is the reverse of the [Square.Index] function to not require a mod operation
+var indexToSquare [64]Square
+
+func init() {
+	for rank := range 8 {
+		for file := range 8 {
+			sq := mkSquare(rank, file)
+			indexToSquare[sq.Index()] = sq
+		}
+	}
 }

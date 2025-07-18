@@ -75,7 +75,7 @@ func NewBoardFromFEN(in string) (*Board, error) {
 			piece, ok := fenPieceTranslation[c]
 
 			if ok {
-				b.pos[i] = piece
+				b.set(indexToSquare[i], piece)
 				i++
 				rowLength--
 
