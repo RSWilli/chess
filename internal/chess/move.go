@@ -108,6 +108,9 @@ func (m Move) String() string {
 	s := ""
 
 	s += m.From.String()
+	if m.Special.Has(Captures) {
+		s += "x"
+	}
 	s += m.To.String()
 
 	switch m.Special {

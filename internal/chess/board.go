@@ -175,7 +175,7 @@ func (b *Board) blackPieces() bitBoard {
 }
 
 func (b *Board) DoMove(m Move) {
-	// TODO: castling, en passant
+	// TODO: castling
 	p := b.Square(m.From)
 
 	// clear the old square
@@ -194,5 +194,28 @@ func (b *Board) DoMove(m Move) {
 		p = Bishop | b.PlayerInTurn
 	}
 
+	// remove the en-passant captured pawn, no need to check for the piece type since the en passant
+	// square is always empty, so no other move can capture on it
+	if m.Special.Has(Captures) && m.To == b.EnPassantTarget && b.PlayerInTurn == White {
+		b.unset(Square(bitBoard(m.To).down()))
+	} else if m.Special.Has(Captures) && m.To == b.EnPassantTarget && b.PlayerInTurn == Black {
+		b.unset(Square(bitBoard(m.To).up()))
+	}
+
+	// save the en passant square for the move generation of the en passant moves
+	if m.Special.Has(DoublePawnPush) && b.PlayerInTurn == White {
+		b.EnPassantTarget = Square(bitBoard(m.From).up())
+	} else if m.Special.Has(DoublePawnPush) && b.PlayerInTurn == Black {
+		b.EnPassantTarget = Square(bitBoard(m.From).down())
+	} else {
+		b.EnPassantTarget = InvalidSquare
+	}
+
 	b.set(m.To, p)
+
+	if b.PlayerInTurn == White {
+		b.PlayerInTurn = Black
+	} else {
+		b.PlayerInTurn = White
+	}
 }

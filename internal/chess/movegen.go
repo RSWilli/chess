@@ -53,7 +53,7 @@ func (b *Board) generatePawnMoves(from, pushed, doublePushed, doublePushRank, pr
 	}
 
 	for _, t := range takes {
-		if capturable&t == 0 {
+		if capturable&t == 0 && b.EnPassantTarget != Square(t) {
 			continue
 		}
 
