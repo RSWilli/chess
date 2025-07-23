@@ -9,6 +9,10 @@ import (
 
 const DefaultFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
+// maxMovesFen is the position with the most number of legal moves for white
+const maxMovesFen = "R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1"
+const maxMoveCount = 218
+
 var fenPieceTranslation = map[rune]Piece{
 	'r': BlackRook,
 	'n': BlackKnight,
@@ -75,7 +79,7 @@ func NewBoardFromFEN(in string) (*Board, error) {
 			piece, ok := fenPieceTranslation[c]
 
 			if ok {
-				b.set(indexToSquare[i], piece)
+				b.set(NewSquareFromIndex(i), piece)
 				i++
 				rowLength--
 
@@ -132,7 +136,7 @@ func NewBoardFromFEN(in string) (*Board, error) {
 			return nil, fmt.Errorf("%w: failed to parse en passant target square %w", ErrMalformedFEN, err)
 		}
 
-		if tile.Rank != Rank3 && tile.Rank != Rank6 {
+		if tile.rank()+1 != 3 && tile.rank()+1 != 6 {
 			return nil, fmt.Errorf("%w: en passant target square must be either rank 3 or 6", ErrMalformedFEN)
 		}
 

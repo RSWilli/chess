@@ -20,6 +20,7 @@ func TestParseTile(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		fmt.Println(tile.Debug())
 		fmt.Println(tile)
 
 		if tile.String() != square {

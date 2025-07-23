@@ -20,6 +20,10 @@ function connectWebSocket() {
         const newEl = new DOMParser().parseFromString(event.data, 'text/html').body.firstChild
         newEl && document.getElementById(newEl.id)?.replaceWith(newEl)
         console.log("updated", newEl.id)
+
+        promotionDialog.close()
+
+        attachClickHandlers()
     })
 
     w.addEventListener('close', (event) => {
@@ -38,7 +42,22 @@ function connectWebSocket() {
 
 connectWebSocket()
 
-document.body.addEventListener("click", ev => {
+function attachClickHandlers() {
+    const tiles = document.querySelectorAll("#board .tile")
+
+    console.log(tiles)
+
+    for (const el of tiles) {
+        el.addEventListener("click", handleSquareClick)
+    }
+}
+
+/**
+ * @type {HTMLDialogElement}
+ */
+const promotionDialog = document.getElementById("promotion")
+
+function handleSquareClick(ev) {
     /**
      * @type {HTMLElement | null}
      */
@@ -46,7 +65,33 @@ document.body.addEventListener("click", ev => {
 
     if (!el) return
 
-    fetch(`square/${el.dataset.square}`, {
+    if (el.classList.contains("promotion")) {
+        handlePromotion(el.dataset.square)
+        return
+    }
+
+    // normal move
+    fetch(`square/${el.dataset.square}/x`, {
         method: "PUT",
     })
+}
+
+function handlePromotion(square) {
+    promotionDialog.showModal()
+
+    promotionDialog.addEventListener("close", ev => {
+        console.log(promotionDialog.returnValue)
+
+        if (!promotionDialog.returnValue) return
+
+        fetch(`square/${square}/${promotionDialog.returnValue}`, {
+            method: "PUT",
+        })
+    }, {
+        once: true
+    })
+}
+
+document.getElementById("closeModal").addEventListener("click", ev => {
+    promotionDialog.close()
 })

@@ -5,7 +5,7 @@ type CastlingAbility uint8
 const (
 	NoCastling CastlingAbility = 0
 
-	CastleWhiteQueen CastlingAbility = 1<<iota - 1
+	CastleWhiteQueen CastlingAbility = 1 << (iota - 1)
 	CastleWhiteKing
 
 	CastleBlackQueen

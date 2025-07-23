@@ -12,6 +12,12 @@
     {{ if $.IsSelected $j $i }}
     {{ $classes = printf "%s %s" $classes "highlighted"}}
     {{ end }}
+    {{ if $.CanMoveTo $j $i }}
+    {{ $classes = printf "%s %s" $classes "target"}}
+    {{ if $.Promotion }}
+    {{ $classes = printf "%s %s" $classes "promotion"}}
+    {{ end }}
+    {{ end }}
     <div class="tile {{ $classes }}" data-square="{{ $file }}{{ $rank }}">
         {{ $pieceAt := $.PieceAt $j $i }}
         {{ if $pieceAt}}

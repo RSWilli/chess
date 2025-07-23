@@ -57,7 +57,7 @@ func main() {
 		}),
 	}
 
-	mux.HandleFunc("PUT /square/{square}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /square/{square}/{promotion}", func(w http.ResponseWriter, r *http.Request) {
 		sq := r.PathValue("square")
 
 		square, err := chess.ParseSquare(sq)
@@ -67,7 +67,24 @@ func main() {
 			return
 		}
 
-		game.DoSquare(square)
+		var special chess.MoveSpecial
+
+		switch r.PathValue("promotion") {
+		case "x":
+			special = chess.NoSpecial
+		case "q":
+			special = chess.PromoteQueen
+		case "r":
+			special = chess.PromoteRook
+		case "n":
+			special = chess.PromoteKnight
+		case "b":
+			special = chess.PromoteBishop
+		default:
+			http.Error(w, fmt.Sprintf("Invalid promotion given: %s", r.PathValue("promotion")), http.StatusBadRequest)
+		}
+
+		game.DoSquare(square, special)
 	})
 
 	mux.Handle("GET /websocket", ws)

@@ -7,8 +7,15 @@ import (
 
 type MoveSpecial uint8
 
+func (c MoveSpecial) Has(other MoveSpecial) bool {
+	return c&other != 0
+}
+
 const (
-	NoSpecial MoveSpecial = iota
+	NoSpecial = 0
+
+	Captures MoveSpecial = 1 << (iota - 1)
+	DoublePawnPush
 
 	PromoteQueen
 	PromoteRook

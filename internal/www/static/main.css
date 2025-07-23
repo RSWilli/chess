@@ -50,6 +50,22 @@ body {
 
 .highlighted {
     box-shadow: 0 0 20px inset #0b5700;
+    box-shadow: 0 0 20px inset #0b5700;
+}
+
+.target {
+    position: relative;
+
+    &::after {
+        position: absolute;
+        top: 35%;
+        left: 35%;
+        content: "";
+        width: 30%;
+        height: 30%;
+        border-radius: 50%;
+        background-color: #0b5700;
+    }
 }
 
 span {
@@ -57,4 +73,35 @@ span {
     font-size: 40px;
     justify-content: center;
     align-items: center;
+}
+
+#promotion {
+    position: fixed;
+    transform: translateY(-50%);
+    max-width: 400px;
+    max-height: 100px;
+    width: 100vw;
+    height: 100vh;
+
+    &::backdrop {
+        background-color: rgba(169, 169, 169, 0.373);
+    }
+}
+
+#dialog-content {
+    display: flex;
+    flex-direction: row;
+    max-width: 400px;
+    max-height: 100px;
+    width: 100vw;
+    height: 100vh;
+
+    & button {
+        background-color: transparent;
+        border: none;
+        outline: none;
+        padding: 0;
+        margin: 0;
+        flex: 1 1 auto;
+    }
 }

@@ -5,6 +5,7 @@ import (
 	"embed"
 	"html/template"
 	"net/http"
+	"slices"
 
 	"github.com/rswilli/chess/internal/chess"
 )
@@ -29,24 +30,25 @@ func RenderBoard(data Data) ([]byte, error) {
 }
 
 type Data struct {
-	Board    *chess.Board
-	Selected chess.Square
+	Board       *chess.Board
+	Selected    chess.Square
+	MoveTargets []chess.Square
+	Promotion   bool
 }
 
 // IsSelected is called by the template for ease of use
 func (d Data) IsSelected(fileIndex, rankIndex int) bool {
-	return d.Selected == chess.Square{
-		File: chess.File(fileIndex),
-		Rank: chess.Rank(rankIndex),
-	}
+	return d.Selected == chess.NewSquare(rankIndex, fileIndex)
+}
+
+// CanMoveTo is called by the template for ease of use
+func (d Data) CanMoveTo(fileIndex, rankIndex int) bool {
+	return slices.Contains(d.MoveTargets, chess.NewSquare(rankIndex, fileIndex))
 }
 
 // pieceAt returns the URL of the image that is needed for the piece at file/rank or an empty string
 func (d Data) PieceAt(fileIndex, rankIndex int) string {
-	piece := d.Board.Square(chess.Square{
-		File: chess.File(fileIndex),
-		Rank: chess.Rank(rankIndex),
-	})
+	piece := d.Board.Square(chess.NewSquare(rankIndex, fileIndex))
 
 	if piece == chess.Empty {
 		return ""
