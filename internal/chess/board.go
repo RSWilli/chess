@@ -13,19 +13,19 @@ type Board struct {
 	Castling        CastlingAbility
 	EnPassantTarget Square
 
-	whitePawns   bitBoard
-	whiteKnights bitBoard
-	whiteBishops bitBoard
-	whiteRooks   bitBoard
-	whiteQueens  bitBoard
-	whiteKing    bitBoard
+	whitePawns   BitBoard
+	whiteKnights BitBoard
+	whiteBishops BitBoard
+	whiteRooks   BitBoard
+	whiteQueens  BitBoard
+	whiteKing    BitBoard
 
-	blackPawns   bitBoard
-	blackKnights bitBoard
-	blackBishops bitBoard
-	blackRooks   bitBoard
-	blackQueens  bitBoard
-	blackKing    bitBoard
+	blackPawns   BitBoard
+	blackKnights BitBoard
+	blackBishops BitBoard
+	blackRooks   BitBoard
+	blackQueens  BitBoard
+	blackKing    BitBoard
 
 	PossibleMoves []Move
 }
@@ -74,29 +74,29 @@ func (b Board) String() string {
 
 func (b *Board) Square(sq Square) Piece {
 	switch {
-	case b.whitePawns.has(sq):
+	case b.whitePawns.Has(sq):
 		return WhitePawn
-	case b.whiteKnights.has(sq):
+	case b.whiteKnights.Has(sq):
 		return WhiteKnight
-	case b.whiteBishops.has(sq):
+	case b.whiteBishops.Has(sq):
 		return WhiteBishop
-	case b.whiteRooks.has(sq):
+	case b.whiteRooks.Has(sq):
 		return WhiteRook
-	case b.whiteQueens.has(sq):
+	case b.whiteQueens.Has(sq):
 		return WhiteQueen
-	case b.whiteKing.has(sq):
+	case b.whiteKing.Has(sq):
 		return WhiteKing
-	case b.blackPawns.has(sq):
+	case b.blackPawns.Has(sq):
 		return BlackPawn
-	case b.blackKnights.has(sq):
+	case b.blackKnights.Has(sq):
 		return BlackKnight
-	case b.blackBishops.has(sq):
+	case b.blackBishops.Has(sq):
 		return BlackBishop
-	case b.blackRooks.has(sq):
+	case b.blackRooks.Has(sq):
 		return BlackRook
-	case b.blackQueens.has(sq):
+	case b.blackQueens.Has(sq):
 		return BlackQueen
-	case b.blackKing.has(sq):
+	case b.blackKing.Has(sq):
 		return BlackKing
 	default:
 		return Empty
@@ -107,29 +107,29 @@ func (b *Board) Square(sq Square) Piece {
 func (b *Board) set(sq Square, p Piece) {
 	switch p {
 	case WhitePawn:
-		b.whitePawns = b.whitePawns.set(sq)
+		b.whitePawns = b.whitePawns.Set(sq)
 	case WhiteKnight:
-		b.whiteKnights = b.whiteKnights.set(sq)
+		b.whiteKnights = b.whiteKnights.Set(sq)
 	case WhiteBishop:
-		b.whiteBishops = b.whiteBishops.set(sq)
+		b.whiteBishops = b.whiteBishops.Set(sq)
 	case WhiteRook:
-		b.whiteRooks = b.whiteRooks.set(sq)
+		b.whiteRooks = b.whiteRooks.Set(sq)
 	case WhiteQueen:
-		b.whiteQueens = b.whiteQueens.set(sq)
+		b.whiteQueens = b.whiteQueens.Set(sq)
 	case WhiteKing:
-		b.whiteKing = b.whiteKing.set(sq)
+		b.whiteKing = b.whiteKing.Set(sq)
 	case BlackPawn:
-		b.blackPawns = b.blackPawns.set(sq)
+		b.blackPawns = b.blackPawns.Set(sq)
 	case BlackKnight:
-		b.blackKnights = b.blackKnights.set(sq)
+		b.blackKnights = b.blackKnights.Set(sq)
 	case BlackBishop:
-		b.blackBishops = b.blackBishops.set(sq)
+		b.blackBishops = b.blackBishops.Set(sq)
 	case BlackRook:
-		b.blackRooks = b.blackRooks.set(sq)
+		b.blackRooks = b.blackRooks.Set(sq)
 	case BlackQueen:
-		b.blackQueens = b.blackQueens.set(sq)
+		b.blackQueens = b.blackQueens.Set(sq)
 	case BlackKing:
-		b.blackKing = b.blackKing.set(sq)
+		b.blackKing = b.blackKing.Set(sq)
 	default:
 		panic("unexpected piece received by set")
 	}
@@ -137,26 +137,26 @@ func (b *Board) set(sq Square, p Piece) {
 
 // unset removes the piece from the board at the given square
 func (b *Board) unset(sq Square) {
-	b.whitePawns = b.whitePawns.unset(sq)
-	b.whiteKnights = b.whiteKnights.unset(sq)
-	b.whiteBishops = b.whiteBishops.unset(sq)
-	b.whiteRooks = b.whiteRooks.unset(sq)
-	b.whiteQueens = b.whiteQueens.unset(sq)
-	b.whiteKing = b.whiteKing.unset(sq)
+	b.whitePawns = b.whitePawns.Unset(sq)
+	b.whiteKnights = b.whiteKnights.Unset(sq)
+	b.whiteBishops = b.whiteBishops.Unset(sq)
+	b.whiteRooks = b.whiteRooks.Unset(sq)
+	b.whiteQueens = b.whiteQueens.Unset(sq)
+	b.whiteKing = b.whiteKing.Unset(sq)
 
-	b.blackPawns = b.blackPawns.unset(sq)
-	b.blackKnights = b.blackKnights.unset(sq)
-	b.blackBishops = b.blackBishops.unset(sq)
-	b.blackRooks = b.blackRooks.unset(sq)
-	b.blackQueens = b.blackQueens.unset(sq)
-	b.blackKing = b.blackKing.unset(sq)
+	b.blackPawns = b.blackPawns.Unset(sq)
+	b.blackKnights = b.blackKnights.Unset(sq)
+	b.blackBishops = b.blackBishops.Unset(sq)
+	b.blackRooks = b.blackRooks.Unset(sq)
+	b.blackQueens = b.blackQueens.Unset(sq)
+	b.blackKing = b.blackKing.Unset(sq)
 }
 
-func (b *Board) allPieces() bitBoard {
+func (b *Board) allPieces() BitBoard {
 	return b.whitePieces() | b.blackPieces()
 }
 
-func (b *Board) whitePieces() bitBoard {
+func (b *Board) whitePieces() BitBoard {
 	return b.whitePawns |
 		b.whiteKnights |
 		b.whiteBishops |
@@ -165,7 +165,7 @@ func (b *Board) whitePieces() bitBoard {
 		b.whiteKing
 }
 
-func (b *Board) blackPieces() bitBoard {
+func (b *Board) blackPieces() BitBoard {
 	return b.blackPawns |
 		b.blackKnights |
 		b.blackBishops |
@@ -197,16 +197,16 @@ func (b *Board) DoMove(m Move) {
 	// remove the en-passant captured pawn, no need to check for the piece type since the en passant
 	// square is always empty, so no other move can capture on it
 	if m.Special.Has(Captures) && m.To == b.EnPassantTarget && b.PlayerInTurn == White {
-		b.unset(Square(bitBoard(m.To).down()))
+		b.unset(Square(BitBoard(m.To).Down()))
 	} else if m.Special.Has(Captures) && m.To == b.EnPassantTarget && b.PlayerInTurn == Black {
-		b.unset(Square(bitBoard(m.To).up()))
+		b.unset(Square(BitBoard(m.To).Up()))
 	}
 
 	// save the en passant square for the move generation of the en passant moves
 	if m.Special.Has(DoublePawnPush) && b.PlayerInTurn == White {
-		b.EnPassantTarget = Square(bitBoard(m.From).up())
+		b.EnPassantTarget = Square(BitBoard(m.From).Up())
 	} else if m.Special.Has(DoublePawnPush) && b.PlayerInTurn == Black {
-		b.EnPassantTarget = Square(bitBoard(m.From).down())
+		b.EnPassantTarget = Square(BitBoard(m.From).Down())
 	} else {
 		b.EnPassantTarget = InvalidSquare
 	}

@@ -7,7 +7,7 @@ import (
 )
 
 // Square is a bitboard with just a single one set.
-type Square bitBoard
+type Square BitBoard
 
 // InvalidSquare represents an invalid square.
 const InvalidSquare Square = 0
@@ -28,7 +28,7 @@ func (t Square) file() int {
 }
 
 func (t Square) Debug() string {
-	return bitBoard(t).String()
+	return BitBoard(t).String()
 }
 
 func (t Square) String() string {

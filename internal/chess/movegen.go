@@ -5,24 +5,24 @@ func (b *Board) GenerateMoves() []Move {
 
 	if b.PlayerInTurn == White {
 		b.generateKingMoves(b.whiteKing)
-		b.whitePawns.each(b.generateWhitePawnMoves)
-		b.whiteKnights.each(b.generateKnightMoves)
-		b.whiteBishops.each(b.generateBishopMoves)
-		b.whiteRooks.each(b.generateRookMoves)
-		b.whiteQueens.each(b.generateQueenMoves)
+		b.whitePawns.Each(b.generateWhitePawnMoves)
+		b.whiteKnights.Each(b.generateKnightMoves)
+		b.whiteBishops.Each(b.generateBishopMoves)
+		b.whiteRooks.Each(b.generateRookMoves)
+		b.whiteQueens.Each(b.generateQueenMoves)
 	} else {
 		b.generateKingMoves(b.blackKing)
-		b.blackPawns.each(b.generateBlackPawnMoves)
-		b.blackKnights.each(b.generateKnightMoves)
-		b.blackBishops.each(b.generateBishopMoves)
-		b.blackRooks.each(b.generateRookMoves)
-		b.blackQueens.each(b.generateQueenMoves)
+		b.blackPawns.Each(b.generateBlackPawnMoves)
+		b.blackKnights.Each(b.generateKnightMoves)
+		b.blackBishops.Each(b.generateBishopMoves)
+		b.blackRooks.Each(b.generateRookMoves)
+		b.blackQueens.Each(b.generateQueenMoves)
 	}
 
 	return b.PossibleMoves
 }
 
-func (b *Board) generatePawnMoves(from, pushed, doublePushed, doublePushRank, promoteRank, capturable bitBoard) {
+func (b *Board) generatePawnMoves(from, pushed, doublePushed, doublePushRank, promoteRank, capturable BitBoard) {
 	if from&doublePushRank != 0 && b.allPieces()&pushed == 0 && b.allPieces()&doublePushed == 0 {
 		// can double push
 
@@ -47,9 +47,9 @@ func (b *Board) generatePawnMoves(from, pushed, doublePushed, doublePushRank, pr
 		})
 	}
 
-	takes := []bitBoard{
-		pushed.left(),
-		pushed.right(),
+	takes := []BitBoard{
+		pushed.Left(),
+		pushed.Right(),
 	}
 
 	for _, t := range takes {
@@ -85,29 +85,32 @@ func (b *Board) generatePawnMoves(from, pushed, doublePushed, doublePushRank, pr
 	}
 }
 
-func (b *Board) generateWhitePawnMoves(bb bitBoard) {
-	b.generatePawnMoves(bb, bb.up(), bb.up().up(), rank2BitBoard, rank7BitBoard, b.blackPieces())
+const rank7BitBoard BitBoard = 0xff00
+const rank2BitBoard BitBoard = 0xff000000000000
+
+func (b *Board) generateWhitePawnMoves(bb BitBoard) {
+	b.generatePawnMoves(bb, bb.Up(), bb.Up().Up(), rank2BitBoard, rank7BitBoard, b.blackPieces())
 }
 
-func (b *Board) generateBlackPawnMoves(bb bitBoard) {
-	b.generatePawnMoves(bb, bb.down(), bb.down().down(), rank7BitBoard, rank2BitBoard, b.whitePieces())
+func (b *Board) generateBlackPawnMoves(bb BitBoard) {
+	b.generatePawnMoves(bb, bb.Down(), bb.Down().Down(), rank7BitBoard, rank2BitBoard, b.whitePieces())
 }
 
-func (b *Board) generateKingMoves(bb bitBoard) {
+func (b *Board) generateKingMoves(bb BitBoard) {
 	// TODO: castling
-	if bb.count() != 1 {
+	if bb.Count() != 1 {
 		panic("expected 1 king")
 	}
 
-	targets := []bitBoard{
-		bb.up(),
-		bb.down(),
-		bb.up().left(),
-		bb.down().left(),
-		bb.up().right(),
-		bb.down().right(),
-		bb.left(),
-		bb.right(),
+	targets := []BitBoard{
+		bb.Up(),
+		bb.Down(),
+		bb.Up().Left(),
+		bb.Down().Left(),
+		bb.Up().Right(),
+		bb.Down().Right(),
+		bb.Left(),
+		bb.Right(),
 	}
 
 	for _, t := range targets {
@@ -125,19 +128,19 @@ func (b *Board) generateKingMoves(bb bitBoard) {
 	}
 }
 
-func (b *Board) generateKnightMoves(bb bitBoard) {
-	targets := []bitBoard{
-		bb.up().up().left(),
-		bb.up().up().right(),
+func (b *Board) generateKnightMoves(bb BitBoard) {
+	targets := []BitBoard{
+		bb.Up().Up().Left(),
+		bb.Up().Up().Right(),
 
-		bb.down().down().left(),
-		bb.down().down().right(),
+		bb.Down().Down().Left(),
+		bb.Down().Down().Right(),
 
-		bb.up().left().left(),
-		bb.up().right().right(),
+		bb.Up().Left().Left(),
+		bb.Up().Right().Right(),
 
-		bb.down().left().left(),
-		bb.down().right().right(),
+		bb.Down().Left().Left(),
+		bb.Down().Right().Right(),
 	}
 
 	for _, t := range targets {
@@ -155,10 +158,10 @@ func (b *Board) generateKnightMoves(bb bitBoard) {
 	}
 }
 
-func (b *Board) generateRookMoves(bb bitBoard) {
+func (b *Board) generateRookMoves(bb BitBoard) {
 	targets := rookMoves(bb)
 
-	for t := range targets.ones() {
+	for t := range targets.Ones() {
 		// TODO: filter out moves with check and blocked moves
 		b.PossibleMoves = append(b.PossibleMoves, Move{
 			From:    Square(bb),
@@ -168,10 +171,10 @@ func (b *Board) generateRookMoves(bb bitBoard) {
 	}
 }
 
-func (b *Board) generateQueenMoves(bb bitBoard) {
+func (b *Board) generateQueenMoves(bb BitBoard) {
 	targets := queenMoves(bb)
 
-	for t := range targets.ones() {
+	for t := range targets.Ones() {
 		// TODO: filter out moves with check and blocked moves
 		b.PossibleMoves = append(b.PossibleMoves, Move{
 			From:    Square(bb),
@@ -181,10 +184,10 @@ func (b *Board) generateQueenMoves(bb bitBoard) {
 	}
 }
 
-func (b *Board) generateBishopMoves(bb bitBoard) {
+func (b *Board) generateBishopMoves(bb BitBoard) {
 	targets := bishopMoves(bb)
 
-	for t := range targets.ones() {
+	for t := range targets.Ones() {
 		// TODO: filter out moves with check and blocked moves
 		b.PossibleMoves = append(b.PossibleMoves, Move{
 			From:    Square(bb),
