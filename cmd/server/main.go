@@ -97,5 +97,7 @@ func main() {
 	}
 
 	slog.Info("starting server", "addr", "localhost:3000")
-	serv.ListenAndServe()
+	err := serv.ListenAndServe()
+
+	slog.Error("server ended", "error", err)
 }

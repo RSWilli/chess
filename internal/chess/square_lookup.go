@@ -10,11 +10,11 @@ type squareLookup[V any] struct {
 }
 
 func (s *squareLookup[V]) get(b BitBoard) V {
-	return s.store[bits.Len64(uint64(b))]
+	return s.store[bits.Len64(uint64(b))-1]
 }
 
 func (s *squareLookup[V]) set(b BitBoard, v V) {
-	s.store[bits.Len64(uint64(b))] = v
+	s.store[bits.Len64(uint64(b))-1] = v
 }
 
 // func (s *squareLookup[V]) getSquare(b Square) V {

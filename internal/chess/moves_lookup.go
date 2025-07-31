@@ -1,16 +1,31 @@
 package chess
 
-var rookMovesLookupTable = squareLookup[BitBoard]{}
-var bishopMovesLookupTable = squareLookup[BitBoard]{}
+func rookMoves(sq, same, opposing BitBoard) BitBoard {
+	all := same | opposing
 
-func rookMoves(sq BitBoard) BitBoard {
-	return rookMovesLookupTable.get(sq)
+	mask := rookMoveMasks.get(sq)
+
+	relevant := mask & all
+
+	// moves contains friendly fire targets
+	moves := rookMoveTargets.get(sq).get(relevant)
+
+	return moves &^ same
 }
 
-func bishopMoves(sq BitBoard) BitBoard {
-	return bishopMovesLookupTable.get(sq)
+func bishopMoves(sq BitBoard, same, opposing BitBoard) BitBoard {
+	all := same | opposing
+
+	mask := bishopMoveMasks.get(sq)
+
+	relevant := mask & all
+
+	// moves contains friendly fire targets
+	moves := bishopMoveTargets.get(sq).get(relevant)
+
+	return moves &^ same
 }
 
-func queenMoves(sq BitBoard) BitBoard {
-	return rookMoves(sq) | bishopMoves(sq)
+func queenMoves(sq BitBoard, same, opposing BitBoard) BitBoard {
+	return rookMoves(sq, same, opposing) | bishopMoves(sq, same, opposing)
 }

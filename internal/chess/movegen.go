@@ -4,25 +4,43 @@ func (b *Board) GenerateMoves() []Move {
 	b.PossibleMoves = make([]Move, 0, maxMoveCount)
 
 	if b.PlayerInTurn == White {
+		same := b.whitePieces()
+		opposing := b.blackPieces()
+
 		b.generateKingMoves(b.whiteKing)
 		b.whitePawns.Each(b.generateWhitePawnMoves)
 		b.whiteKnights.Each(b.generateKnightMoves)
-		b.whiteBishops.Each(b.generateBishopMoves)
-		b.whiteRooks.Each(b.generateRookMoves)
-		b.whiteQueens.Each(b.generateQueenMoves)
+		b.whiteBishops.Each(func(bb BitBoard) {
+			b.generateBishopMoves(bb, same, opposing)
+		})
+		b.whiteRooks.Each(func(bb BitBoard) {
+			b.generateRookMoves(bb, same, opposing)
+		})
+		b.whiteQueens.Each(func(bb BitBoard) {
+			b.generateQueenMoves(bb, same, opposing)
+		})
 	} else {
+		same := b.blackPieces()
+		opposing := b.whitePieces()
+
 		b.generateKingMoves(b.blackKing)
 		b.blackPawns.Each(b.generateBlackPawnMoves)
 		b.blackKnights.Each(b.generateKnightMoves)
-		b.blackBishops.Each(b.generateBishopMoves)
-		b.blackRooks.Each(b.generateRookMoves)
-		b.blackQueens.Each(b.generateQueenMoves)
+		b.blackBishops.Each(func(bb BitBoard) {
+			b.generateBishopMoves(bb, same, opposing)
+		})
+		b.blackRooks.Each(func(bb BitBoard) {
+			b.generateRookMoves(bb, same, opposing)
+		})
+		b.blackQueens.Each(func(bb BitBoard) {
+			b.generateQueenMoves(bb, same, opposing)
+		})
 	}
 
 	return b.PossibleMoves
 }
 
-func (b *Board) generatePawnMoves(from, pushed, doublePushed, doublePushRank, promoteRank, capturable BitBoard) {
+func (b *Board) generatePawnMoves(from, pushed, doublePushed, doublePushRank, promoteRank, opposing BitBoard) {
 	if from&doublePushRank != 0 && b.allPieces()&pushed == 0 && b.allPieces()&doublePushed == 0 {
 		// can double push
 
@@ -53,7 +71,7 @@ func (b *Board) generatePawnMoves(from, pushed, doublePushed, doublePushRank, pr
 	}
 
 	for _, t := range takes {
-		if capturable&t == 0 && b.EnPassantTarget != Square(t) {
+		if opposing&t == 0 && b.EnPassantTarget != Square(t) {
 			continue
 		}
 
@@ -158,41 +176,47 @@ func (b *Board) generateKnightMoves(bb BitBoard) {
 	}
 }
 
-func (b *Board) generateRookMoves(bb BitBoard) {
-	targets := rookMoves(bb)
+func (b *Board) generateRookMoves(rooks, same, opposing BitBoard) {
+	for rook := range rooks.Ones() {
+		targets := rookMoves(rook, same, opposing)
 
-	for t := range targets.Ones() {
-		// TODO: filter out moves with check and blocked moves
-		b.PossibleMoves = append(b.PossibleMoves, Move{
-			From:    Square(bb),
-			To:      Square(t),
-			Special: NoSpecial, // TODO: special takes moves
-		})
+		for t := range targets.Ones() {
+			// TODO: filter out moves with check and blocked moves
+			b.PossibleMoves = append(b.PossibleMoves, Move{
+				From:    Square(rook),
+				To:      Square(t),
+				Special: NoSpecial, // TODO: special takes moves
+			})
+		}
 	}
 }
 
-func (b *Board) generateQueenMoves(bb BitBoard) {
-	targets := queenMoves(bb)
+func (b *Board) generateQueenMoves(queens, same, opposing BitBoard) {
+	for queen := range queens.Ones() {
+		targets := queenMoves(queen, same, opposing)
 
-	for t := range targets.Ones() {
-		// TODO: filter out moves with check and blocked moves
-		b.PossibleMoves = append(b.PossibleMoves, Move{
-			From:    Square(bb),
-			To:      Square(t),
-			Special: NoSpecial, // TODO: special takes moves
-		})
+		for t := range targets.Ones() {
+			// TODO: filter out moves with check and blocked moves
+			b.PossibleMoves = append(b.PossibleMoves, Move{
+				From:    Square(queen),
+				To:      Square(t),
+				Special: NoSpecial, // TODO: special takes moves
+			})
+		}
 	}
 }
 
-func (b *Board) generateBishopMoves(bb BitBoard) {
-	targets := bishopMoves(bb)
+func (b *Board) generateBishopMoves(bishop, same, opposing BitBoard) {
+	for bishop := range bishop.Ones() {
+		targets := bishopMoves(bishop, same, opposing)
 
-	for t := range targets.Ones() {
-		// TODO: filter out moves with check and blocked moves
-		b.PossibleMoves = append(b.PossibleMoves, Move{
-			From:    Square(bb),
-			To:      Square(t),
-			Special: NoSpecial, // TODO: special takes moves
-		})
+		for t := range targets.Ones() {
+			// TODO: filter out moves with check and blocked moves
+			b.PossibleMoves = append(b.PossibleMoves, Move{
+				From:    Square(bishop),
+				To:      Square(t),
+				Special: NoSpecial, // TODO: special takes moves
+			})
+		}
 	}
 }
