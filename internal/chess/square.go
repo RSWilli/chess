@@ -41,6 +41,16 @@ func (t Square) String() string {
 	return files[file:file+1] + ranks[rank:rank+1]
 }
 
+func MustParseSquare(square string) Square {
+	sq, err := ParseSquare(square)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return sq
+}
+
 func ParseSquare(square string) (Square, error) {
 	if len(square) != 2 {
 		return InvalidSquare, fmt.Errorf("invalid tile %s", square)

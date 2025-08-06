@@ -174,48 +174,144 @@ func (b *Board) blackPieces() BitBoard {
 		b.blackKing
 }
 
+var a1 = MustParseSquare("a1")
+var e1 = MustParseSquare("e1")
+var a8 = MustParseSquare("a8")
+var h1 = MustParseSquare("h1")
+var e8 = MustParseSquare("e8")
+var h8 = MustParseSquare("h8")
+
 func (b *Board) DoMove(m Move) {
-	// TODO: castling
-	p := b.Square(m.From)
+	if m.Special.Has(CastleLong | CastleShort) {
+		// Castling move:
+		if b.PlayerInTurn == White && m.Special == CastleShort {
+			b.unset(e1)
+			b.unset(h1)
 
-	// clear the old square
-	b.unset(m.From)
-	// must clear all other boards before setting the new one
-	b.unset(m.To)
+			b.set(whiteCastleKingKingTarget, WhiteKing)
+			b.set(whiteCastleKingRookTarget, WhiteRook)
 
-	switch {
-	case m.Special.Has(PromoteQueen):
-		p = Queen | b.PlayerInTurn
-	case m.Special.Has(PromoteRook):
-		p = Rook | b.PlayerInTurn
-	case m.Special.Has(PromoteKnight):
-		p = Knight | b.PlayerInTurn
-	case m.Special.Has(PromoteBishop):
-		p = Bishop | b.PlayerInTurn
-	}
+			b.Castling &^= CastleWhiteKing | CastleWhiteQueen
+		}
+		if b.PlayerInTurn == White && m.Special == CastleLong {
+			b.unset(e1)
+			b.unset(a1)
 
-	// remove the en-passant captured pawn, no need to check for the piece type since the en passant
-	// square is always empty, so no other move can capture on it
-	if m.Special.Has(Captures) && m.To == b.EnPassantTarget && b.PlayerInTurn == White {
-		b.unset(Square(BitBoard(m.To).Down()))
-	} else if m.Special.Has(Captures) && m.To == b.EnPassantTarget && b.PlayerInTurn == Black {
-		b.unset(Square(BitBoard(m.To).Up()))
-	}
+			b.set(whiteCastleQueenKingTarget, WhiteKing)
+			b.set(whiteCastleQueenRookTarget, WhiteRook)
 
-	// save the en passant square for the move generation of the en passant moves
-	if m.Special.Has(DoublePawnPush) && b.PlayerInTurn == White {
-		b.EnPassantTarget = Square(BitBoard(m.From).Up())
-	} else if m.Special.Has(DoublePawnPush) && b.PlayerInTurn == Black {
-		b.EnPassantTarget = Square(BitBoard(m.From).Down())
+			b.Castling &^= CastleWhiteKing | CastleWhiteQueen
+		}
+		if b.PlayerInTurn == Black && m.Special == CastleShort {
+			b.unset(e8)
+			b.unset(h8)
+
+			b.set(blackCastleKingKingTarget, BlackKing)
+			b.set(blackCastleKingRookTarget, BlackRook)
+
+			b.Castling &^= CastleBlackKing | CastleBlackQueen
+		}
+		if b.PlayerInTurn == Black && m.Special == CastleLong {
+			b.unset(e8)
+			b.unset(a8)
+
+			b.set(blackCastleQueenKingTarget, BlackKing)
+			b.set(blackCastleQueenRookTarget, BlackRook)
+
+			b.Castling &^= CastleBlackKing | CastleBlackQueen
+		}
 	} else {
-		b.EnPassantTarget = InvalidSquare
-	}
+		p := b.Square(m.From)
 
-	b.set(m.To, p)
+		// clear the old square
+		b.unset(m.From)
+		// must clear all other boards before setting the new one
+		b.unset(m.To)
+
+		switch {
+		case m.Special.Has(PromoteQueen):
+			p = Queen | b.PlayerInTurn
+		case m.Special.Has(PromoteRook):
+			p = Rook | b.PlayerInTurn
+		case m.Special.Has(PromoteKnight):
+			p = Knight | b.PlayerInTurn
+		case m.Special.Has(PromoteBishop):
+			p = Bishop | b.PlayerInTurn
+		}
+
+		// remove the en-passant captured pawn, no need to check for the piece type since the en passant
+		// square is always empty, so no other move can capture on it
+		if m.Special.Has(Captures) && m.To == b.EnPassantTarget && b.PlayerInTurn == White {
+			b.unset(Square(BitBoard(m.To).Down()))
+		} else if m.Special.Has(Captures) && m.To == b.EnPassantTarget && b.PlayerInTurn == Black {
+			b.unset(Square(BitBoard(m.To).Up()))
+		}
+
+		// save the en passant square for the move generation of the en passant moves
+		if m.Special.Has(DoublePawnPush) && b.PlayerInTurn == White {
+			b.EnPassantTarget = Square(BitBoard(m.From).Up())
+		} else if m.Special.Has(DoublePawnPush) && b.PlayerInTurn == Black {
+			b.EnPassantTarget = Square(BitBoard(m.From).Down())
+		} else {
+			b.EnPassantTarget = InvalidSquare
+		}
+
+		// prevent castling moves:
+		switch m.From {
+		case a1:
+			b.Castling &^= CastleWhiteQueen
+		case e1:
+			b.Castling &^= CastleWhiteQueen | CastleWhiteKing
+		case h1:
+			b.Castling &^= CastleWhiteKing
+		case a8:
+			b.Castling &^= CastleBlackQueen
+		case e8:
+			b.Castling &^= CastleBlackQueen | CastleBlackKing
+		case h8:
+			b.Castling &^= CastleBlackKing
+		}
+
+		switch m.To {
+		case a1:
+			b.Castling &^= CastleWhiteQueen
+		case h1:
+			b.Castling &^= CastleWhiteKing
+		case a8:
+			b.Castling &^= CastleBlackQueen
+		case h8:
+			b.Castling &^= CastleBlackKing
+		}
+
+		b.set(m.To, p)
+	}
 
 	if b.PlayerInTurn == White {
 		b.PlayerInTurn = Black
 	} else {
 		b.PlayerInTurn = White
 	}
+}
+
+// IsCheck is meant to be called by the visualization and returns true if the current player is in check
+func (b *Board) IsCheck() bool {
+	if b.PlayerInTurn == White {
+		attacked := b.blackAttackedSquares()
+
+		return b.whiteKing&attacked != 0
+	} else {
+		attacked := b.whiteAttackedSquares()
+
+		return b.blackKing&attacked != 0
+	}
+}
+
+// IsCheckMate is meant to be called by the visualization and returns true if the current player is in checkmate
+func (b *Board) IsCheckMate() bool {
+	return b.IsCheck() && len(b.GenerateMoves()) == 0
+}
+
+// IsDraw is meant to be called by the visualization and returns true if the game is drewn
+func (b *Board) IsDraw() bool {
+	return !b.IsCheck() && len(b.GenerateMoves()) == 0
 }

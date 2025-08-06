@@ -12,7 +12,7 @@ func (c MoveSpecial) Has(other MoveSpecial) bool {
 }
 
 const (
-	NoSpecial = 0
+	NoSpecial MoveSpecial = 0
 
 	Captures MoveSpecial = 1 << (iota - 1)
 	DoublePawnPush
