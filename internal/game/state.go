@@ -27,7 +27,7 @@ func (s *State) Render() ([]byte, error) {
 	var moves []chess.Square
 	var promotion bool
 
-	for _, m := range s.currentBoard.PossibleMoves {
+	for _, m := range s.currentBoard.GenerateMoves() {
 		if m.From != s.currentSquare {
 			continue
 		}
@@ -64,7 +64,7 @@ func (s *State) DoSquare(square chess.Square, special chess.MoveSpecial) {
 
 	if s.currentSquare == chess.InvalidSquare {
 
-		hasMove := slices.ContainsFunc(s.currentBoard.PossibleMoves, func(m chess.Move) bool {
+		hasMove := slices.ContainsFunc(s.currentBoard.GenerateMoves(), func(m chess.Move) bool {
 			return m.From == square
 		})
 
@@ -85,11 +85,11 @@ func (s *State) DoSquare(square chess.Square, special chess.MoveSpecial) {
 	var moveI int
 
 	if special == chess.NoSpecial {
-		moveI = slices.IndexFunc(s.currentBoard.PossibleMoves, func(m chess.Move) bool {
+		moveI = slices.IndexFunc(s.currentBoard.GenerateMoves(), func(m chess.Move) bool {
 			return m.From == s.currentSquare && m.To == square
 		})
 	} else {
-		moveI = slices.IndexFunc(s.currentBoard.PossibleMoves, func(m chess.Move) bool {
+		moveI = slices.IndexFunc(s.currentBoard.GenerateMoves(), func(m chess.Move) bool {
 			// search for a move that also contains the special move (aka promotion)
 			// take in mind that captures can also promote
 			return m.From == s.currentSquare && m.To == square && m.Special.Has(special)
@@ -101,7 +101,7 @@ func (s *State) DoSquare(square chess.Square, special chess.MoveSpecial) {
 		return
 	}
 
-	s.currentBoard.DoMove(s.currentBoard.PossibleMoves[moveI])
+	s.currentBoard.DoMove(s.currentBoard.GenerateMoves()[moveI])
 	s.currentBoard.GenerateMoves()
 
 	s.currentSquare = chess.InvalidSquare

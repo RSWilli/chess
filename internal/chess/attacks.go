@@ -1,61 +1,28 @@
 package chess
 
-// whiteAttackedSquares returns a [BitBoard] where all ones are a square that is attacked by white
-func (b *Board) whiteAttackedSquares() BitBoard {
+func calculateAttackMaps(all, king, queens, rooks, bishops, knights, pawns BitBoard) (attacksTo squareLookup[BitBoard], attacksFrom squareLookup[BitBoard]) {
 	// we want to know all attacked pieces, so we treat all as enemy pieces for the
 	// magic bitboard lookup
 	same := BitBoard(0)
-	opposing := b.allPieces()
+	opposing := all
 
-	attacked := BitBoard(0)
-
-	b.whitePawns.Each(func(b BitBoard) {
-		attacked |= whitePawnAttacks(b)
+	pawns.Each(func(b BitBoard) {
+		attacksFrom.set(b, whitePawnAttacks(b))
 	})
-	b.whiteKnights.Each(func(b BitBoard) {
-		attacked |= knightMoves(b)
+	knights.Each(func(b BitBoard) {
+		attacksFrom.set(b, knightMoves(b))
 	})
-	b.whiteBishops.Each(func(b BitBoard) {
-		attacked |= bishopMoves(b, same, opposing)
+	bishops.Each(func(b BitBoard) {
+		attacksFrom.set(b, bishopMoves(b, same, opposing))
 	})
-	b.whiteRooks.Each(func(b BitBoard) {
-		attacked |= rookMoves(b, same, opposing)
+	rooks.Each(func(b BitBoard) {
+		attacksFrom.set(b, rookMoves(b, same, opposing))
 	})
-	b.whiteQueens.Each(func(b BitBoard) {
-		attacked |= queenMoves(b, same, opposing)
+	queens.Each(func(b BitBoard) {
+		attacksFrom.set(b, queenMoves(b, same, opposing))
 	})
 
-	attacked |= kingMoves(b.whiteKing)
+	attacksFrom.set(king, kingMoves(king))
 
-	return attacked
-}
-
-// blackAttackedSquares returns a [BitBoard] where all ones are a square that is attacked by black
-func (b *Board) blackAttackedSquares() BitBoard {
-	// we want to know all attacked pieces, so we treat all as enemy pieces for the
-	// magic bitboard lookup
-	same := BitBoard(0)
-	opposing := b.allPieces()
-
-	attacked := BitBoard(0)
-
-	b.blackPawns.Each(func(b BitBoard) {
-		attacked |= blackPawnAttacks(b)
-	})
-	b.blackKnights.Each(func(b BitBoard) {
-		attacked |= knightMoves(b)
-	})
-	b.blackBishops.Each(func(b BitBoard) {
-		attacked |= bishopMoves(b, same, opposing)
-	})
-	b.blackRooks.Each(func(b BitBoard) {
-		attacked |= rookMoves(b, same, opposing)
-	})
-	b.blackQueens.Each(func(b BitBoard) {
-		attacked |= queenMoves(b, same, opposing)
-	})
-
-	attacked |= kingMoves(b.blackKing)
-
-	return attacked
+	return transpose(attacksFrom), attacksTo
 }

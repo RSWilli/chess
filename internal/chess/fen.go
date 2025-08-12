@@ -13,6 +13,9 @@ const DefaultFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 const maxMovesFen = "R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1"
 const maxMoveCount = 218
 
+// pinFen is a position where the rook is pinned in only one direction
+const pinFen = "4k3/1p4pp/2p5/8/q3r2Q/3p3P/1P4PK/4R3 b - - 0 1"
+
 var fenPieceTranslation = map[rune]Piece{
 	'r': BlackRook,
 	'n': BlackKnight,
