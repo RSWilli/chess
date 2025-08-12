@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/rswilli/chess/internal/chess"
 )
@@ -36,17 +37,32 @@ type Data struct {
 	Promotion   bool
 }
 
-// IsSelected is called by the template for ease of use
-func (d Data) IsSelected(fileIndex, rankIndex int) bool {
-	return d.Selected == chess.NewSquare(rankIndex, fileIndex)
+// ClassesFor returns the HTML classes for the file and rank. Intended to be called from the template
+func (d Data) ClassesFor(fileIndex, rankIndex int) string {
+	var classes []string
+
+	if (rankIndex+fileIndex)%2 == 1 {
+		classes = append(classes, "black")
+	} else {
+		classes = append(classes, "white")
+	}
+
+	if d.Selected == chess.NewSquare(rankIndex, fileIndex) {
+		classes = append(classes, "highlighted")
+	}
+
+	if slices.Contains(d.MoveTargets, chess.NewSquare(rankIndex, fileIndex)) {
+		classes = append(classes, "target")
+
+		if d.Promotion {
+			classes = append(classes, "promotion")
+		}
+	}
+
+	return strings.Join(classes, " ")
 }
 
-// CanMoveTo is called by the template for ease of use
-func (d Data) CanMoveTo(fileIndex, rankIndex int) bool {
-	return slices.Contains(d.MoveTargets, chess.NewSquare(rankIndex, fileIndex))
-}
-
-// pieceAt returns the URL of the image that is needed for the piece at file/rank or an empty string
+// PieceAt returns the URL of the image that is needed for the piece at file/rank or an empty string
 func (d Data) PieceAt(fileIndex, rankIndex int) string {
 	piece := d.Board.Square(chess.NewSquare(rankIndex, fileIndex))
 
@@ -74,7 +90,7 @@ func files() []string {
 }
 
 // color returns "black" or "white" depending on the given indices of the ranks and file lists
-func color(rankIndex, fileIndex int) string {
+func color(fileIndex, rankIndex int) string {
 	if (rankIndex+fileIndex)%2 == 1 {
 		return "black"
 	}

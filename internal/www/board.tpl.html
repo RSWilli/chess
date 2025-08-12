@@ -8,17 +8,7 @@
     {{ range $i, $rank := ranks }}
     <span>{{ $rank }}</span>
     {{ range $j, $file := files }}
-    {{ $classes := color $i $j }}
-    {{ if $.IsSelected $j $i }}
-    {{ $classes = printf "%s %s" $classes "highlighted"}}
-    {{ end }}
-    {{ if $.CanMoveTo $j $i }}
-    {{ $classes = printf "%s %s" $classes "target"}}
-    {{ if $.Promotion }}
-    {{ $classes = printf "%s %s" $classes "promotion"}}
-    {{ end }}
-    {{ end }}
-    <div class="tile {{ $classes }}" data-square="{{ $file }}{{ $rank }}">
+    <div class="tile {{ $.ClassesFor $j $i }}" data-square="{{ $file }}{{ $rank }}">
         {{ $pieceAt := $.PieceAt $j $i }}
         {{ if $pieceAt}}
         <img class="piece" src="{{ $pieceAt }}" draggable="false">
