@@ -38,3 +38,26 @@ func (i *Info) MarshalText() (text []byte, err error) {
 
 var _ encoding.TextUnmarshaler = &Info{}
 var _ encoding.TextMarshaler = &Info{}
+
+type PerftResult struct {
+	Total int
+	Moves map[string]int
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (p *PerftResult) String() string {
+	var text []byte
+	for move, count := range p.Moves {
+		text = fmt.Appendf(text, "%s: %d\n", move, count)
+	}
+
+	text = append(text, '\n')
+	text = fmt.Appendf(text, "Nodes searched: %d\n\n", p.Total)
+
+	return string(text)
+}
+
+type GoResponse struct {
+	BestMove string
+	Ponder   string
+}

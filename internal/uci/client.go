@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
+	"time"
 )
 
 type Client struct {
@@ -105,70 +105,145 @@ func (c *Client) NewGame() error {
 	return c.writeCommand("ucinewgame")
 }
 
-func (c *Client) Perft(depth int) (int, map[string]int, error) {
+func (c *Client) Perft(depth int) (PerftResult, error) {
 	err := c.writeCommand(fmt.Sprintf("go perft %d", depth))
 
 	if err != nil {
-		return 0, nil, err
-	}
-
-	for range 4 { // FIXME: 4 is stockfish specific
-		_, err := c.readInfo()
-
-		if err != nil {
-			return 0, nil, err
-		}
+		return PerftResult{}, err
 	}
 
 	// first empty line signifies the end of the moves
-	moveLines, err := c.readUntil("")
+	response, err := c.readUntil("")
 
 	if err != nil {
-		return 0, nil, err
+		return PerftResult{}, err
 	}
 
 	moves := make(map[string]int)
 
-	for _, l := range moveLines {
+	for _, l := range response {
+		if strings.HasPrefix(l, "info") {
+			// before our desired output stockfish outputs info strings
+			// we skip these for perft
+			continue
+		}
+
 		// e.g. "g2g4: 214048"
 
 		parts := strings.Split(l, ": ")
 
 		if len(parts) != 2 {
-			return 0, nil, fmt.Errorf("move wrong format: %s", l)
+			return PerftResult{}, fmt.Errorf("move wrong format: %s", l)
 		}
 
-		count, err := strconv.ParseInt(parts[1], 10, 64)
+		count, err := parseInt(parts[1])
 
 		if err != nil {
-			return 0, nil, err
+			return PerftResult{}, err
 		}
 
-		moves[parts[0]] = int(count)
+		moves[parts[0]] = count
 	}
 
 	totalLine, err := c.read()
 
 	if err != nil {
-		return 0, nil, err
+		return PerftResult{}, err
 	}
 
 	totalNum := strings.TrimPrefix(totalLine, "Nodes searched: ")
 
-	total, err := strconv.ParseInt(totalNum, 10, 64)
+	total, err := parseInt(totalNum)
 
 	if err != nil {
-		return 0, nil, err
+		return PerftResult{}, err
 	}
 
 	// ends with a new line
 	_, err = c.read()
 
 	if err != nil {
-		return 0, nil, err
+		return PerftResult{}, err
 	}
 
-	return int(total), moves, nil
+	return PerftResult{Total: total, Moves: moves}, nil
+}
+
+func (c *Client) Go(opts GoOptions) (GoResponse, error) {
+	var parts []string
+
+	parts = append(parts, "go")
+
+	if len(opts.SearchMoves) > 0 {
+		parts = append(parts, "searchmoves")
+		parts = append(parts, strings.Join(opts.SearchMoves, " "))
+	}
+	if opts.Ponder {
+		parts = append(parts, "ponder")
+	}
+	if opts.WhiteTime != 0 {
+		parts = append(parts, fmt.Sprintf("wtime %d", opts.WhiteTime/time.Millisecond))
+	}
+	if opts.BlackTime != 0 {
+		parts = append(parts, fmt.Sprintf("btime %d", opts.BlackTime/time.Millisecond))
+	}
+	if opts.WhiteIncrement != 0 {
+		parts = append(parts, fmt.Sprintf("winc %d", opts.WhiteIncrement/time.Millisecond))
+	}
+	if opts.BlackIncrement != 0 {
+		parts = append(parts, fmt.Sprintf("binc %d", opts.BlackIncrement/time.Millisecond))
+	}
+	if opts.MovesToGo != 0 {
+		parts = append(parts, fmt.Sprintf("movestogo %d", opts.MovesToGo))
+	}
+	if opts.Depth != 0 {
+		parts = append(parts, fmt.Sprintf("depth %d", opts.Depth))
+	}
+	if opts.Nodes != 0 {
+		parts = append(parts, fmt.Sprintf("nodes %d", opts.Nodes))
+	}
+	if opts.Mate != 0 {
+		parts = append(parts, fmt.Sprintf("mate %d", opts.Mate))
+	}
+	if opts.MoveTime != 0 {
+		parts = append(parts, fmt.Sprintf("movetime %d", opts.MoveTime/time.Millisecond))
+	}
+	if opts.Infinite {
+		parts = append(parts, "infinite")
+	}
+
+	err := c.writeCommand(strings.Join(parts, " "))
+
+	if err != nil {
+		return GoResponse{}, err
+	}
+
+	for {
+		line, err := c.read()
+
+		if err != nil {
+			return GoResponse{}, err
+		}
+
+		if strings.HasPrefix(line, "info") {
+			continue // drop the info lines
+		}
+
+		if !strings.HasPrefix(line, "bestmove") {
+			return GoResponse{}, fmt.Errorf("unexpected response while go-ing: %s", line)
+		}
+
+		parts := strings.Split(line, " ")
+
+		if len(parts) != 4 || parts[2] != "ponder" {
+			return GoResponse{}, fmt.Errorf("bestmove response with unexpected format: %s", line)
+		}
+
+		return GoResponse{
+			BestMove: parts[1],
+			Ponder:   parts[3],
+		}, nil
+	}
 }
 
 // Position calls the position command to intialize a position. as a special case fen can also be "startpos"
@@ -195,20 +270,20 @@ func (c *Client) Position(fen string, moves []string) error {
 	return c.waitForReady()
 }
 
-func (c *Client) readInfo() (Info, error) {
-	line, err := c.read()
+// func (c *Client) readInfo() (Info, error) {
+// 	line, err := c.read()
 
-	if err != nil {
-		return Info{}, err
-	}
+// 	if err != nil {
+// 		return Info{}, err
+// 	}
 
-	var info Info
+// 	var info Info
 
-	err = info.UnmarshalText([]byte(line))
+// 	err = info.UnmarshalText([]byte(line))
 
-	if err != nil {
-		return Info{}, err
-	}
+// 	if err != nil {
+// 		return Info{}, err
+// 	}
 
-	return info, nil
-}
+// 	return info, nil
+// }

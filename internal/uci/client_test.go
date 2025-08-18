@@ -26,11 +26,21 @@ func Test(t *testing.T) {
 		t.Fatalf("could not set position: %v", err)
 	}
 
-	total, moves, err := sf.Perft(5)
+	res, err := sf.Perft(5)
 
 	if err != nil {
 		t.Fatalf("failed to run perft: %v", err)
 	}
 
-	fmt.Printf("total: %d\nmoves: %#v\n", total, moves)
+	fmt.Printf("%#v\n", res)
+
+	gores, err := sf.Go(uci.GoOptions{
+		Depth: 5,
+	})
+
+	if err != nil {
+		t.Fatalf("failed to run go: %v", err)
+	}
+
+	fmt.Printf("%#v\n", gores)
 }
