@@ -31,7 +31,7 @@ func RenderBoard(data Data) ([]byte, error) {
 }
 
 type Data struct {
-	Board       *chess.Board
+	Board       *chess.Position
 	Selected    chess.Square
 	MoveTargets []chess.Square
 	Promotion   bool

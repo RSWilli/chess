@@ -56,15 +56,15 @@ var fenCastlingAbilityTranslation = map[rune]CastlingAbility{
 
 var ErrMalformedFEN = errors.New("given FEN is malformed")
 
-// NewBoardFromFEN parses the given FEN string as defined in https://www.chessprogramming.org/Forsyth-Edwards_Notation
-func NewBoardFromFEN(in string) (*Board, error) {
+// NewFromFEN parses the given FEN string as defined in https://www.chessprogramming.org/Forsyth-Edwards_Notation
+func NewFromFEN(in string) (*Position, error) {
 	parts := strings.Split(in, " ")
 
 	if len(parts) != 6 {
 		return nil, fmt.Errorf("%w: expected FEN with 6 parts", ErrMalformedFEN)
 	}
 
-	b := &Board{}
+	b := &Position{}
 
 	ranks := strings.Split(parts[0], fenRankSeparator)
 

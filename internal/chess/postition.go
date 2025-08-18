@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-type Board struct {
+type Position struct {
 	// max 50, see https://www.chessprogramming.org/Fifty-move_Rule
 	HalfmoveClock uint8
 	Moves         int
@@ -45,10 +45,8 @@ type Board struct {
 	possibleMoves []Move
 }
 
-// const testFen = "8/8/8/3Nn3/8/8/8/3K1k2 w KQkq - 0 1"
-
-func NewBoard() *Board {
-	b, err := NewBoardFromFEN(DefaultFen)
+func New() *Position {
+	b, err := NewFromFEN(DefaultFen)
 	// b, err := NewBoardFromFEN(testFen)
 
 	if err != nil {
@@ -58,18 +56,18 @@ func NewBoard() *Board {
 	return b
 }
 
-func (board Board) String() string {
+func (p Position) String() string {
 	sb := strings.Builder{}
 
 	for rank := range 8 {
 		for file := range 8 {
-			piece := board.Square(NewSquare(rank, file))
+			piece := p.Square(NewSquare(rank, file))
 
 			sb.WriteRune(piece.Rune())
 		}
 		sb.WriteByte('\n')
 	}
-	switch board.PlayerInTurn {
+	switch p.PlayerInTurn {
 	case White:
 		sb.WriteString("White\n")
 	case Black:
@@ -78,40 +76,40 @@ func (board Board) String() string {
 		panic("unexpected player turn")
 	}
 
-	sb.WriteString(board.Castling.String())
-	if board.EnPassantTarget != InvalidSquare {
+	sb.WriteString(p.Castling.String())
+	if p.EnPassantTarget != InvalidSquare {
 		sb.WriteString("\nEn passant to: ")
-		sb.WriteString(board.EnPassantTarget.String())
+		sb.WriteString(p.EnPassantTarget.String())
 	}
 
 	return sb.String()
 }
 
-func (board *Board) Square(sq Square) Piece {
+func (p *Position) Square(sq Square) Piece {
 	switch {
-	case board.whitePawns.Has(sq):
+	case p.whitePawns.Has(sq):
 		return WhitePawn
-	case board.whiteKnights.Has(sq):
+	case p.whiteKnights.Has(sq):
 		return WhiteKnight
-	case board.whiteBishops.Has(sq):
+	case p.whiteBishops.Has(sq):
 		return WhiteBishop
-	case board.whiteRooks.Has(sq):
+	case p.whiteRooks.Has(sq):
 		return WhiteRook
-	case board.whiteQueens.Has(sq):
+	case p.whiteQueens.Has(sq):
 		return WhiteQueen
-	case board.whiteKing.Has(sq):
+	case p.whiteKing.Has(sq):
 		return WhiteKing
-	case board.blackPawns.Has(sq):
+	case p.blackPawns.Has(sq):
 		return BlackPawn
-	case board.blackKnights.Has(sq):
+	case p.blackKnights.Has(sq):
 		return BlackKnight
-	case board.blackBishops.Has(sq):
+	case p.blackBishops.Has(sq):
 		return BlackBishop
-	case board.blackRooks.Has(sq):
+	case p.blackRooks.Has(sq):
 		return BlackRook
-	case board.blackQueens.Has(sq):
+	case p.blackQueens.Has(sq):
 		return BlackQueen
-	case board.blackKing.Has(sq):
+	case p.blackKing.Has(sq):
 		return BlackKing
 	default:
 		return Empty
@@ -119,7 +117,7 @@ func (board *Board) Square(sq Square) Piece {
 }
 
 // set sets the given piece on the given square
-func (board *Board) set(sq Square, p Piece) {
+func (board *Position) set(sq Square, p Piece) {
 	switch p {
 	case WhitePawn:
 		board.whitePawns = board.whitePawns.Set(sq)
@@ -151,42 +149,42 @@ func (board *Board) set(sq Square, p Piece) {
 }
 
 // unset removes the piece from the board at the given square
-func (board *Board) unset(sq Square) {
-	board.whitePawns = board.whitePawns.Unset(sq)
-	board.whiteKnights = board.whiteKnights.Unset(sq)
-	board.whiteBishops = board.whiteBishops.Unset(sq)
-	board.whiteRooks = board.whiteRooks.Unset(sq)
-	board.whiteQueens = board.whiteQueens.Unset(sq)
-	board.whiteKing = board.whiteKing.Unset(sq)
+func (p *Position) unset(sq Square) {
+	p.whitePawns = p.whitePawns.Unset(sq)
+	p.whiteKnights = p.whiteKnights.Unset(sq)
+	p.whiteBishops = p.whiteBishops.Unset(sq)
+	p.whiteRooks = p.whiteRooks.Unset(sq)
+	p.whiteQueens = p.whiteQueens.Unset(sq)
+	p.whiteKing = p.whiteKing.Unset(sq)
 
-	board.blackPawns = board.blackPawns.Unset(sq)
-	board.blackKnights = board.blackKnights.Unset(sq)
-	board.blackBishops = board.blackBishops.Unset(sq)
-	board.blackRooks = board.blackRooks.Unset(sq)
-	board.blackQueens = board.blackQueens.Unset(sq)
-	board.blackKing = board.blackKing.Unset(sq)
+	p.blackPawns = p.blackPawns.Unset(sq)
+	p.blackKnights = p.blackKnights.Unset(sq)
+	p.blackBishops = p.blackBishops.Unset(sq)
+	p.blackRooks = p.blackRooks.Unset(sq)
+	p.blackQueens = p.blackQueens.Unset(sq)
+	p.blackKing = p.blackKing.Unset(sq)
 }
 
-func (board *Board) allPieces() BitBoard {
-	return board.whitePieces() | board.blackPieces()
+func (p *Position) allPieces() BitBoard {
+	return p.whitePieces() | p.blackPieces()
 }
 
-func (board *Board) whitePieces() BitBoard {
-	return board.whitePawns |
-		board.whiteKnights |
-		board.whiteBishops |
-		board.whiteRooks |
-		board.whiteQueens |
-		board.whiteKing
+func (p *Position) whitePieces() BitBoard {
+	return p.whitePawns |
+		p.whiteKnights |
+		p.whiteBishops |
+		p.whiteRooks |
+		p.whiteQueens |
+		p.whiteKing
 }
 
-func (board *Board) blackPieces() BitBoard {
-	return board.blackPawns |
-		board.blackKnights |
-		board.blackBishops |
-		board.blackRooks |
-		board.blackQueens |
-		board.blackKing
+func (p *Position) blackPieces() BitBoard {
+	return p.blackPawns |
+		p.blackKnights |
+		p.blackBishops |
+		p.blackRooks |
+		p.blackQueens |
+		p.blackKing
 }
 
 var a1 = MustParseSquare("a1")
@@ -196,7 +194,7 @@ var h1 = MustParseSquare("h1")
 var e8 = MustParseSquare("e8")
 var h8 = MustParseSquare("h8")
 
-func (board *Board) DoMove(m Move) {
+func (board *Position) DoMove(m Move) {
 	if m.Special.Has(CastleLong | CastleShort) {
 		// Castling move:
 		if board.PlayerInTurn == White && m.Special == CastleShort {
@@ -338,20 +336,20 @@ func (board *Board) DoMove(m Move) {
 }
 
 // IsCheck is meant to be called by the visualization and returns true if the current player is in check
-func (board *Board) IsCheck() bool {
-	if board.PlayerInTurn == White {
-		return board.attacksTo.get(board.whiteKing) != 0
+func (p *Position) IsCheck() bool {
+	if p.PlayerInTurn == White {
+		return p.attacksTo.get(p.whiteKing) != 0
 	} else {
-		return board.attacksTo.get(board.blackKing) != 0
+		return p.attacksTo.get(p.blackKing) != 0
 	}
 }
 
 // IsCheckMate is meant to be called by the visualization and returns true if the current player is in checkmate
-func (board *Board) IsCheckMate() bool {
-	return board.IsCheck() && len(board.GenerateMoves()) == 0
+func (p *Position) IsCheckMate() bool {
+	return p.IsCheck() && len(p.GenerateMoves()) == 0
 }
 
 // IsDraw is meant to be called by the visualization and returns true if the game is drewn
-func (board *Board) IsDraw() bool {
-	return !board.IsCheck() && len(board.GenerateMoves()) == 0
+func (p *Position) IsDraw() bool {
+	return !p.IsCheck() && len(p.GenerateMoves()) == 0
 }

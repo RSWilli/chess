@@ -14,7 +14,7 @@ import (
 type State struct {
 	lock pubsub.RWLock
 
-	currentBoard *chess.Board
+	currentBoard *chess.Position
 
 	// currentSquare is the square that was selected for the next move
 	currentSquare chess.Square
@@ -47,7 +47,7 @@ func (s *State) Render() ([]byte, error) {
 
 func New() *State {
 	s := &State{
-		currentBoard:  chess.NewBoard(),
+		currentBoard:  chess.New(),
 		currentSquare: chess.InvalidSquare,
 	}
 
