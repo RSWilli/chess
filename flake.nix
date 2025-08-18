@@ -19,6 +19,7 @@
         packages = with pkgs; [
           go
           stockfish
+          rlwrap # for terminal command history inside stockfish
         ];
 
         GO111MODULE = "on";
