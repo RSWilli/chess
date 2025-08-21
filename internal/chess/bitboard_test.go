@@ -24,8 +24,36 @@ func TestSameRank(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		fmt.Println(tc.a, tc.b)
+		fmt.Println(tc.a, tc.b, tc.expect)
 		out := BitBoard(tc.a).isSameRank(BitBoard(tc.b))
+
+		if out != tc.expect {
+			t.Fatal("failed")
+		}
+	}
+}
+
+func TestSameFile(t *testing.T) {
+	type test struct {
+		a Square
+		b Square
+
+		expect bool
+	}
+	tests := []test{
+		{NewSquare(5, 7), NewSquare(2, 7), true},
+		{NewSquare(5, 3), NewSquare(2, 3), true},
+		{NewSquare(7, 7), NewSquare(7, 7), true},
+		{NewSquare(5, 2), NewSquare(2, 3), false},
+		{NewSquare(5, 7), NewSquare(2, 1), false},
+		{NewSquare(5, 7), NewSquare(6, 0), false},
+		{NewSquare(0, 5), NewSquare(7, 4), false},
+		{0, NewSquare(2, 3), false},
+	}
+
+	for _, tc := range tests {
+		fmt.Println(tc.a, tc.b, tc.expect)
+		out := BitBoard(tc.a).isSameFile(BitBoard(tc.b))
 
 		if out != tc.expect {
 			t.Fatal("failed")

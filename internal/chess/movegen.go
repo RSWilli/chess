@@ -7,7 +7,7 @@ func (p *Position) GenerateMoves() []Move {
 	// TODO: 50 move rule, draw by material
 	p.possibleMoves = make([]Move, 0, maxMoveCount)
 
-	if p.PlayerInTurn == White {
+	if p.playerInTurn == White {
 
 		p.generateKingMoves(p.whiteKing)
 		p.whitePawns.Each(p.generateWhitePawnMoves)
@@ -29,31 +29,39 @@ func (p *Position) GenerateMoves() []Move {
 	return p.possibleMoves
 }
 
-func (board *Position) generatePawnMoves(from, pushed, doublePushed, doublePushRank, promoteRank, opposing BitBoard) {
-	all := board.allPieces()
+func (p *Position) generatePawnMoves(from, pushed, doublePushed, doublePushRank, promoteRank, opposing BitBoard) {
+	all := p.allPieces()
 
 	if from&doublePushRank != 0 && all&pushed == 0 && all&doublePushed == 0 {
 		// can double push
 
-		board.possibleMoves = append(board.possibleMoves, Move{
+		m := Move{
 			From:    Square(from),
 			To:      Square(doublePushed),
 			Special: DoublePawnPush,
-		})
+		}
+
+		if p.isLegalMove(m) {
+			p.possibleMoves = append(p.possibleMoves, m)
+		}
 	}
 
 	// moves tracks the possible moves temporarily to defer
-	// promotionm decision
+	// promotion decision
 	moves := make([]Move, 0, 3)
 
 	if all&pushed == 0 {
 		// can push
 
-		moves = append(moves, Move{
+		m := Move{
 			From:    Square(from),
 			To:      Square(pushed),
 			Special: NoSpecial,
-		})
+		}
+
+		if p.isLegalMove(m) {
+			moves = append(moves, m)
+		}
 	}
 
 	takes := []BitBoard{
@@ -62,20 +70,38 @@ func (board *Position) generatePawnMoves(from, pushed, doublePushed, doublePushR
 	}
 
 	for _, t := range takes {
-		if opposing&t == 0 && board.EnPassantTarget != Square(t) {
+		if t == 0 {
+			// edge of the board
 			continue
 		}
 
-		moves = append(moves, Move{
+		if opposing&t == 0 && p.enPassantTarget != Square(t) {
+			continue
+		}
+
+		taken := Empty
+
+		if p.enPassantTarget == Square(t) {
+			taken = Pawn
+		} else {
+			taken = p.Square(Square(t))
+		}
+
+		m := Move{
 			From:    Square(from),
 			To:      Square(t),
 			Special: Captures,
-		})
+			Takes:   taken,
+		}
+
+		if p.isLegalMove(m) {
+			moves = append(moves, m)
+		}
 	}
 
 	if from&promoteRank == 0 {
 		// no promotion
-		board.possibleMoves = append(board.possibleMoves, moves...)
+		p.possibleMoves = append(p.possibleMoves, moves...)
 		return
 	}
 
@@ -86,10 +112,10 @@ func (board *Position) generatePawnMoves(from, pushed, doublePushed, doublePushR
 		PromoteKnight,
 	}
 
-	for _, p := range promotions {
+	for _, prom := range promotions {
 		for _, m := range moves {
-			m.Special = m.Special | p
-			board.possibleMoves = append(board.possibleMoves, m)
+			m.Special = m.Special | prom
+			p.possibleMoves = append(p.possibleMoves, m)
 		}
 	}
 }
@@ -110,11 +136,11 @@ var (
 	whiteCastleKing            = BitBoard(MustParseSquare("f1") | MustParseSquare("g1"))
 	whiteCastleKingKingTarget  = MustParseSquare("g1")
 	whiteCastleKingRookTarget  = MustParseSquare("f1")
-	whiteCastleQueen           = BitBoard(MustParseSquare("b1") | MustParseSquare("c1") | MustParseSquare("d1"))
+	whiteCastleQueen           = BitBoard(MustParseSquare("c1") | MustParseSquare("d1"))
 	whiteCastleQueenKingTarget = MustParseSquare("c1")
 	whiteCastleQueenRookTarget = MustParseSquare("d1")
 
-	blackCastleQueen           = BitBoard(MustParseSquare("b8") | MustParseSquare("c8") | MustParseSquare("d8"))
+	blackCastleQueen           = BitBoard(MustParseSquare("c8") | MustParseSquare("d8"))
 	blackCastleKingKingTarget  = MustParseSquare("g8")
 	blackCastleKingRookTarget  = MustParseSquare("f8")
 	blackCastleKing            = BitBoard(MustParseSquare("f8") | MustParseSquare("g8"))
@@ -133,18 +159,18 @@ func (p *Position) notAttacked(bb BitBoard) bool {
 }
 
 func (p *Position) canCastleWhiteKing() bool {
-	return p.Castling.Has(CastleWhiteKing) && p.all&whiteCastleKing == 0 && p.notAttacked(whiteCastleKing)
+	return p.whiteKing == BitBoard(e1) && p.castling.Has(CastleWhiteKing) && p.all&whiteCastleKing == 0 && p.notAttacked(whiteCastleKing)
 }
 
 func (p *Position) canCastleWhiteQueen() bool {
-	return p.Castling.Has(CastleWhiteQueen) && p.all&whiteCastleQueen == 0 && p.notAttacked(whiteCastleQueen)
+	return p.whiteKing == BitBoard(e1) && p.castling.Has(CastleWhiteQueen) && p.all&whiteCastleQueen == 0 && p.notAttacked(whiteCastleQueen)
 }
 func (p *Position) canCastleBlackKing() bool {
-	return p.Castling.Has(CastleBlackKing) && p.all&blackCastleKing == 0 && p.notAttacked(blackCastleKing)
+	return p.blackKing == BitBoard(e8) && p.castling.Has(CastleBlackKing) && p.all&blackCastleKing == 0 && p.notAttacked(blackCastleKing)
 }
 
 func (p *Position) canCastleBlackQueen() bool {
-	return p.Castling.Has(CastleBlackQueen) && p.all&blackCastleQueen == 0 && p.notAttacked(blackCastleQueen)
+	return p.blackKing == BitBoard(e8) && p.castling.Has(CastleBlackQueen) && p.all&blackCastleQueen == 0 && p.notAttacked(blackCastleQueen)
 }
 
 func (p *Position) generateKingMoves(bb BitBoard) {
@@ -168,19 +194,22 @@ func (p *Position) generateKingMoves(bb BitBoard) {
 		}
 
 		s := NoSpecial
+		taken := Empty
 
 		if t&p.theirs != 0 {
 			s |= Captures
+			taken = p.Square(Square(t))
 		}
 
 		p.possibleMoves = append(p.possibleMoves, Move{
 			From:    Square(bb),
 			To:      Square(t),
 			Special: s,
+			Takes:   taken,
 		})
 	}
 
-	if p.Castling == NoCastling {
+	if p.castling == NoCastling {
 		return
 	}
 
@@ -189,45 +218,45 @@ func (p *Position) generateKingMoves(bb BitBoard) {
 		return
 	}
 
-	// white O-O
-	if p.PlayerInTurn == White && p.canCastleWhiteKing() {
+	// white O-O, aka e1g1
+	if p.playerInTurn == White && p.canCastleWhiteKing() {
 		p.possibleMoves = append(p.possibleMoves, Move{
-			From:    Square(bb),
+			From:    e1,
 			To:      whiteCastleKingKingTarget,
 			Special: CastleShort,
 		})
 	}
 
-	// white O-O-O
-	if p.PlayerInTurn == White && p.canCastleWhiteQueen() {
+	// white O-O-O, aka e1c1
+	if p.playerInTurn == White && p.canCastleWhiteQueen() {
 		p.possibleMoves = append(p.possibleMoves, Move{
-			From:    Square(bb),
+			From:    e1,
 			To:      whiteCastleQueenKingTarget,
 			Special: CastleLong,
 		})
 	}
 
-	// black O-O
-	if p.PlayerInTurn == Black && p.canCastleBlackKing() {
+	// black O-O, aka e8g8
+	if p.playerInTurn == Black && p.canCastleBlackKing() {
 		p.possibleMoves = append(p.possibleMoves, Move{
-			From:    Square(bb),
+			From:    e8,
 			To:      blackCastleKingKingTarget,
 			Special: CastleShort,
 		})
 	}
 
-	// black O-O-O
-	if p.PlayerInTurn == Black && p.canCastleBlackQueen() {
+	// black O-O-O, aka e8c8
+	if p.playerInTurn == Black && p.canCastleBlackQueen() {
 		p.possibleMoves = append(p.possibleMoves, Move{
-			From:    Square(bb),
+			From:    e8,
 			To:      blackCastleQueenKingTarget,
 			Special: CastleLong,
 		})
 	}
 }
 
-func (p *Position) generateKnightMoves(bb BitBoard) {
-	for t := range knightMoves(bb).Ones() {
+func (p *Position) generateKnightMoves(knight BitBoard) {
+	for t := range knightMoves(knight).Ones() {
 		if t == 0 {
 			// wrapped around
 			continue
@@ -239,76 +268,143 @@ func (p *Position) generateKnightMoves(bb BitBoard) {
 		}
 
 		s := NoSpecial
+		taken := Empty
 
 		if t&p.theirs != 0 {
 			s |= Captures
+			taken = p.Square(Square(t))
 		}
 
-		// TODO: filter out moves with check and blocked moves
-		p.possibleMoves = append(p.possibleMoves, Move{
-			From:    Square(bb),
+		m := Move{
+			From:    Square(knight),
 			To:      Square(t),
 			Special: s,
-		})
+			Takes:   taken,
+		}
+
+		if !p.isLegalMove(m) {
+			continue
+		}
+
+		p.possibleMoves = append(p.possibleMoves, m)
 	}
 }
 
-func (p *Position) generateRookMoves(rooks BitBoard) {
-	for rook := range rooks.Ones() {
-		targets := rookMoves(rook, p.ours, p.theirs)
+func (p *Position) generateRookMoves(rook BitBoard) {
+	targets := rookMoves(rook, p.ours, p.theirs)
 
-		for t := range targets.Ones() {
-			s := NoSpecial
+	for t := range targets.Ones() {
+		s := NoSpecial
+		taken := Empty
 
-			if t&p.theirs != 0 {
-				s |= Captures
-			}
-
-			p.possibleMoves = append(p.possibleMoves, Move{
-				From:    Square(rook),
-				To:      Square(t),
-				Special: s,
-			})
+		if t&p.theirs != 0 {
+			s |= Captures
+			taken = p.Square(Square(t))
 		}
+
+		m := Move{
+			From:    Square(rook),
+			To:      Square(t),
+			Special: s,
+			Takes:   taken,
+		}
+
+		if !p.isLegalMove(m) {
+			continue
+		}
+
+		p.possibleMoves = append(p.possibleMoves, m)
 	}
 }
 
-func (p *Position) generateQueenMoves(queens BitBoard) {
-	for queen := range queens.Ones() {
-		targets := queenMoves(queen, p.ours, p.theirs)
+func (p *Position) generateQueenMoves(queen BitBoard) {
+	targets := queenMoves(queen, p.ours, p.theirs)
 
-		for t := range targets.Ones() {
-			s := NoSpecial
+	for t := range targets.Ones() {
+		s := NoSpecial
+		taken := Empty
 
-			if t&p.theirs != 0 {
-				s |= Captures
-			}
-
-			p.possibleMoves = append(p.possibleMoves, Move{
-				From:    Square(queen),
-				To:      Square(t),
-				Special: s,
-			})
+		if t&p.theirs != 0 {
+			s |= Captures
+			taken = p.Square(Square(t))
 		}
+
+		m := Move{
+			From:    Square(queen),
+			To:      Square(t),
+			Special: s,
+			Takes:   taken,
+		}
+
+		if !p.isLegalMove(m) {
+			continue
+		}
+
+		p.possibleMoves = append(p.possibleMoves, m)
 	}
 }
 
 func (p *Position) generateBishopMoves(bishop BitBoard) {
-	for bishop := range bishop.Ones() {
-		targets := bishopMoves(bishop, p.ours, p.theirs)
+	targets := bishopMoves(bishop, p.ours, p.theirs)
 
-		for t := range targets.Ones() {
-			s := NoSpecial
+	for t := range targets.Ones() {
+		s := NoSpecial
+		taken := Empty
 
-			if t&p.theirs != 0 {
-				s |= Captures
-			}
+		if t&p.theirs != 0 {
+			s |= Captures
+			taken = p.Square(Square(t))
+		}
 
-			p.possibleMoves = append(p.possibleMoves, Move{
-				From:    Square(bishop),
-				To:      Square(t),
-				Special: s,
-			})
+		m := Move{
+			From:    Square(bishop),
+			To:      Square(t),
+			Special: s,
+			Takes:   taken,
+		}
+
+		if !p.isLegalMove(m) {
+			continue
+		}
+
+		p.possibleMoves = append(p.possibleMoves, m)
+	}
+}
+
+// isLegalMove checks if the move would leave the king in check. This does not correctly
+// check king moves or en passant captures.
+func (p *Position) isLegalMove(m Move) bool {
+	var ourKing BitBoard
+
+	if p.playerInTurn == White {
+		ourKing = p.whiteKing
+	} else {
+		ourKing = p.blackKing
+	}
+
+	// move the piece, needed for pin detection:
+	moved := (p.all | BitBoard(m.To)) &^ BitBoard(m.From)
+
+	for _, attack := range p.xRayKingAttacks {
+		if BitBoard(m.To) != attack.from && moved&attack.ray == 0 {
+			// no piece is blocking the sliding piece attack or taking it, piece could have moved
+			// out of a pin, or did not block the check -> not legal
+			return false
 		}
 	}
+
+	kingAttacks := p.attacksTo.get(ourKing)
+
+	if m.Special.Has(Captures) && (kingAttacks&^BitBoard(m.To)) == 0 {
+		// the only attacker attacking the king is taken, so this is a legal move
+		return true
+	}
+
+	if kingAttacks == 0 && len(p.xRayKingAttacks) == 0 {
+		// king is not attacked and not xrayed in any way, so the move is legal.
+		return true
+	}
+
+	// the move is only legal if the king is not attacked
+	return kingAttacks == 0
 }

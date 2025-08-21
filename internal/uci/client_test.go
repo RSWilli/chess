@@ -20,7 +20,7 @@ func Test(t *testing.T) {
 		t.Fatal("could not start new game")
 	}
 
-	err = sf.Position(uci.StartPositionFEN, nil)
+	err = sf.Position(uci.StartPosition, nil)
 
 	if err != nil {
 		t.Fatalf("could not set position: %v", err)

@@ -30,10 +30,8 @@ type Move struct {
 	From    Square
 	To      Square
 	Special MoveSpecial
+	Takes   Piece
 }
-
-const castleShort = "O-O"
-const castleLong = "O-O-O"
 
 var ErrInvalidMove = errors.New("could not parse move")
 
@@ -42,21 +40,6 @@ var InvalidMove = Move{From: InvalidSquare, To: InvalidSquare}
 // ParseMove parses a move given in pure coordinate notation
 // see https://www.chessprogramming.org/Algebraic_Chess_Notation#Pure_coordinate_notation
 func ParseMove(in string) (Move, error) {
-	if in == castleLong {
-		return Move{
-			From:    InvalidSquare,
-			To:      InvalidSquare,
-			Special: CastleLong,
-		}, nil
-	}
-	if in == castleShort {
-		return Move{
-			From:    InvalidSquare,
-			To:      InvalidSquare,
-			Special: CastleShort,
-		}, nil
-	}
-
 	if len(in) != 4 && len(in) != 5 {
 		return InvalidMove, ErrInvalidMove
 	}
@@ -97,27 +80,19 @@ func ParseMove(in string) (Move, error) {
 	return m, nil
 }
 
+// String returns the move in pure coordinate notation
+// see https://www.chessprogramming.org/Algebraic_Chess_Notation#Pure_coordinate_notation
 func (m Move) String() string {
-	if m.Special == CastleLong {
-		return castleLong
-	}
-	if m.Special == CastleShort {
-		return castleShort
-	}
-
 	s := ""
 
 	s += m.From.String()
-	if m.Special.Has(Captures) {
-		s += "x"
-	}
 	s += m.To.String()
 
 	switch m.Special {
 	case PromoteBishop:
 		s += "b"
 	case PromoteKnight:
-		s += "k"
+		s += "n"
 	case PromoteQueen:
 		s += "q"
 	case PromoteRook:

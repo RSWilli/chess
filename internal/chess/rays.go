@@ -1,59 +1,44 @@
 package chess
 
-// ray is a name for a [BitBoard] that connects from and to
+// ray is a name for a [BitBoard] that connects from and to, but without containing to from and to
 type ray struct {
 	from BitBoard
 	to   BitBoard
 }
 
-var rays = map[ray]BitBoard{}
+type attackRay struct {
+	from BitBoard
+	ray  BitBoard
+}
+
+// initialize rays to hold the correct amount
+var rays = make(map[ray]BitBoard, 1036)
 
 func init() {
 	// generate rays in all queen move directions for each square
 	for i := range 64 {
-		var r BitBoard
 		from := BitBoard(1 << i)
 
-		r = from
-		for to := from.Right(); to != 0; to = to.Right() {
-			r |= to
-			rays[ray{from, to}] = r
-		}
-		r = from
-		for to := from.Left(); to != 0; to = to.Left() {
-			r |= to
-			rays[ray{from, to}] = r
-		}
-		r = from
-		for to := from.Up(); to != 0; to = to.Up() {
-			r |= to
-			rays[ray{from, to}] = r
-		}
-		r = from
-		for to := from.Down(); to != 0; to = to.Down() {
-			r |= to
-			rays[ray{from, to}] = r
+		stepFuncs := []func(BitBoard) BitBoard{
+			BitBoard.Right,
+			BitBoard.Left,
+			BitBoard.Up,
+			BitBoard.Down,
+
+			BitBoard.DiagUp,
+			BitBoard.DiagDown,
+			BitBoard.AntiDiagUp,
+			BitBoard.AntiDiagDown,
 		}
 
-		r = from
-		for to := from.Up().Right(); to != 0; to = to.Up().Right() {
-			r |= to
-			rays[ray{from, to}] = r
-		}
-		r = from
-		for to := from.Up().Left(); to != 0; to = to.Up().Left() {
-			r |= to
-			rays[ray{from, to}] = r
-		}
-		r = from
-		for to := from.Down().Right(); to != 0; to = to.Down().Right() {
-			r |= to
-			rays[ray{from, to}] = r
-		}
-		r = from
-		for to := from.Down().Left(); to != 0; to = to.Down().Left() {
-			r |= to
-			rays[ray{from, to}] = r
+		for _, step := range stepFuncs {
+			r := BitBoard(0)
+			for to := step(from); to != 0; to = step(to) {
+				if r != 0 {
+					rays[ray{from, to}] = r
+				}
+				r |= to
+			}
 		}
 	}
 }

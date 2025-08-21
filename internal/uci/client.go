@@ -19,7 +19,7 @@ func (c *Client) Close() {
 	c.close()
 }
 
-const StartPositionFEN = "startpos"
+const StartPosition = "startpos"
 
 func (c *Client) read() (string, error) {
 	ok := c.scan.Scan()
@@ -30,13 +30,13 @@ func (c *Client) read() (string, error) {
 
 	line := c.scan.Text()
 
-	fmt.Println("read " + line)
+	// fmt.Println("read " + line)
 
 	return line, nil
 }
 
 func (c *Client) writeCommand(cmd string) error {
-	fmt.Println("writing " + cmd)
+	// fmt.Println("writing " + cmd)
 
 	l := append([]byte(cmd), '\n')
 
@@ -250,6 +250,11 @@ func (c *Client) Go(opts GoOptions) (GoResponse, error) {
 func (c *Client) Position(fen string, moves []string) error {
 	var buf bytes.Buffer
 	buf.WriteString("position ")
+
+	if fen != StartPosition {
+		buf.WriteString("fen ")
+	}
+
 	buf.WriteString(fen)
 
 	if len(moves) != 0 {

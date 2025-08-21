@@ -107,11 +107,11 @@ func NewFromFEN(in string) (*Position, error) {
 		return nil, fmt.Errorf("%w: expected a color, got %s", ErrMalformedFEN, parts[1])
 	}
 
-	b.PlayerInTurn = player
+	b.playerInTurn = player
 
 	// castling
 	if parts[2] == "-" {
-		b.Castling = NoCastling
+		b.castling = NoCastling
 	} else if len(parts[2]) <= 4 {
 		for _, c := range parts[2] {
 			castling, ok := fenCastlingAbilityTranslation[c]
@@ -120,7 +120,7 @@ func NewFromFEN(in string) (*Position, error) {
 				return nil, fmt.Errorf("%w: invalid castling ability %c", ErrMalformedFEN, c)
 			}
 
-			b.Castling |= castling
+			b.castling |= castling
 		}
 	} else {
 		return nil, fmt.Errorf("%w: expected max 4 chars for castling ability, or '-'", ErrMalformedFEN)
@@ -128,7 +128,7 @@ func NewFromFEN(in string) (*Position, error) {
 
 	// en passant
 	if parts[3] == "-" {
-		b.EnPassantTarget = InvalidSquare
+		b.enPassantTarget = InvalidSquare
 	} else {
 		tile, err := ParseSquare(parts[3])
 
@@ -140,7 +140,7 @@ func NewFromFEN(in string) (*Position, error) {
 			return nil, fmt.Errorf("%w: en passant target square must be either rank 3 or 6", ErrMalformedFEN)
 		}
 
-		b.EnPassantTarget = tile
+		b.enPassantTarget = tile
 	}
 
 	// halfmove
@@ -164,6 +164,8 @@ func NewFromFEN(in string) (*Position, error) {
 	}
 
 	b.Moves = int(fullMoves)
+
+	b.computeAll()
 
 	return b, nil
 }

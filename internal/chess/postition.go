@@ -5,13 +5,15 @@ import (
 )
 
 type Position struct {
+	_ [0]func() // equal guard, we have local cached values
+
 	// max 50, see https://www.chessprogramming.org/Fifty-move_Rule
 	HalfmoveClock uint8
 	Moves         int
 
-	PlayerInTurn    Piece
-	Castling        CastlingAbility
-	EnPassantTarget Square
+	playerInTurn    Piece
+	castling        CastlingAbility
+	enPassantTarget Square
 
 	whitePawns   BitBoard
 	whiteKnights BitBoard
@@ -34,6 +36,10 @@ type Position struct {
 	// attacksFrom maps each square to a [BitBoard] where all the attacked squares are 1
 	attacksFrom squareLookup[BitBoard]
 
+	// xRayKingAttacks contains all lines of attacks that could create a check when a piece moves.
+	// this is needed to detect pinned pieces
+	xRayKingAttacks []attackRay
+
 	// piece unions:
 	// ours is a BitBoard where all pieces of the current player are unioned
 	ours BitBoard
@@ -46,8 +52,8 @@ type Position struct {
 }
 
 func New() *Position {
-	b, err := NewFromFEN(DefaultFen)
-	// b, err := NewBoardFromFEN(testFen)
+	// b, err := NewFromFEN(DefaultFen)
+	b, err := NewFromFEN("r3k2r/4qn2/p1p1b2p/6pB/P1p5/2P5/5PPP/RQ2R1K1 b kq - 0 1")
 
 	if err != nil {
 		panic(err)
@@ -67,7 +73,7 @@ func (p Position) String() string {
 		}
 		sb.WriteByte('\n')
 	}
-	switch p.PlayerInTurn {
+	switch p.playerInTurn {
 	case White:
 		sb.WriteString("White\n")
 	case Black:
@@ -76,10 +82,10 @@ func (p Position) String() string {
 		panic("unexpected player turn")
 	}
 
-	sb.WriteString(p.Castling.String())
-	if p.EnPassantTarget != InvalidSquare {
+	sb.WriteString(p.castling.String())
+	if p.enPassantTarget != InvalidSquare {
 		sb.WriteString("\nEn passant to: ")
-		sb.WriteString(p.EnPassantTarget.String())
+		sb.WriteString(p.enPassantTarget.String())
 	}
 
 	return sb.String()
@@ -194,150 +200,200 @@ var h1 = MustParseSquare("h1")
 var e8 = MustParseSquare("e8")
 var h8 = MustParseSquare("h8")
 
-func (board *Position) DoMove(m Move) {
+func (p *Position) DoMove(m Move) {
 	if m.Special.Has(CastleLong | CastleShort) {
 		// Castling move:
-		if board.PlayerInTurn == White && m.Special == CastleShort {
-			board.unset(e1)
-			board.unset(h1)
+		if p.playerInTurn == White && m.Special == CastleShort {
+			p.unset(e1)
+			p.unset(h1)
 
-			board.set(whiteCastleKingKingTarget, WhiteKing)
-			board.set(whiteCastleKingRookTarget, WhiteRook)
+			p.set(whiteCastleKingKingTarget, WhiteKing)
+			p.set(whiteCastleKingRookTarget, WhiteRook)
 
-			board.Castling &^= CastleWhiteKing | CastleWhiteQueen
+			p.castling &^= CastleWhiteKing | CastleWhiteQueen
 		}
-		if board.PlayerInTurn == White && m.Special == CastleLong {
-			board.unset(e1)
-			board.unset(a1)
+		if p.playerInTurn == White && m.Special == CastleLong {
+			p.unset(e1)
+			p.unset(a1)
 
-			board.set(whiteCastleQueenKingTarget, WhiteKing)
-			board.set(whiteCastleQueenRookTarget, WhiteRook)
+			p.set(whiteCastleQueenKingTarget, WhiteKing)
+			p.set(whiteCastleQueenRookTarget, WhiteRook)
 
-			board.Castling &^= CastleWhiteKing | CastleWhiteQueen
+			p.castling &^= CastleWhiteKing | CastleWhiteQueen
 		}
-		if board.PlayerInTurn == Black && m.Special == CastleShort {
-			board.unset(e8)
-			board.unset(h8)
+		if p.playerInTurn == Black && m.Special == CastleShort {
+			p.unset(e8)
+			p.unset(h8)
 
-			board.set(blackCastleKingKingTarget, BlackKing)
-			board.set(blackCastleKingRookTarget, BlackRook)
+			p.set(blackCastleKingKingTarget, BlackKing)
+			p.set(blackCastleKingRookTarget, BlackRook)
 
-			board.Castling &^= CastleBlackKing | CastleBlackQueen
+			p.castling &^= CastleBlackKing | CastleBlackQueen
 		}
-		if board.PlayerInTurn == Black && m.Special == CastleLong {
-			board.unset(e8)
-			board.unset(a8)
+		if p.playerInTurn == Black && m.Special == CastleLong {
+			p.unset(e8)
+			p.unset(a8)
 
-			board.set(blackCastleQueenKingTarget, BlackKing)
-			board.set(blackCastleQueenRookTarget, BlackRook)
+			p.set(blackCastleQueenKingTarget, BlackKing)
+			p.set(blackCastleQueenRookTarget, BlackRook)
 
-			board.Castling &^= CastleBlackKing | CastleBlackQueen
+			p.castling &^= CastleBlackKing | CastleBlackQueen
 		}
 	} else {
-		p := board.Square(m.From)
+		prom := p.Square(m.From)
 
 		// clear the old square
-		board.unset(m.From)
+		p.unset(m.From)
 		// must clear all other boards before setting the new one
-		board.unset(m.To)
+		p.unset(m.To)
 
 		switch {
 		case m.Special.Has(PromoteQueen):
-			p = Queen | board.PlayerInTurn
+			prom = Queen | p.playerInTurn
 		case m.Special.Has(PromoteRook):
-			p = Rook | board.PlayerInTurn
+			prom = Rook | p.playerInTurn
 		case m.Special.Has(PromoteKnight):
-			p = Knight | board.PlayerInTurn
+			prom = Knight | p.playerInTurn
 		case m.Special.Has(PromoteBishop):
-			p = Bishop | board.PlayerInTurn
+			prom = Bishop | p.playerInTurn
 		}
 
 		// remove the en-passant captured pawn, no need to check for the piece type since the en passant
 		// square is always empty, so no other move can capture on it
-		if m.Special.Has(Captures) && m.To == board.EnPassantTarget && board.PlayerInTurn == White {
-			board.unset(Square(BitBoard(m.To).Down()))
-		} else if m.Special.Has(Captures) && m.To == board.EnPassantTarget && board.PlayerInTurn == Black {
-			board.unset(Square(BitBoard(m.To).Up()))
+		if m.Special.Has(Captures) && m.To == p.enPassantTarget && p.playerInTurn == White {
+			p.unset(Square(BitBoard(m.To).Down()))
+		} else if m.Special.Has(Captures) && m.To == p.enPassantTarget && p.playerInTurn == Black {
+			p.unset(Square(BitBoard(m.To).Up()))
 		}
 
 		// save the en passant square for the move generation of the en passant moves
-		if m.Special.Has(DoublePawnPush) && board.PlayerInTurn == White {
-			board.EnPassantTarget = Square(BitBoard(m.From).Up())
-		} else if m.Special.Has(DoublePawnPush) && board.PlayerInTurn == Black {
-			board.EnPassantTarget = Square(BitBoard(m.From).Down())
+		if m.Special.Has(DoublePawnPush) && p.playerInTurn == White {
+			p.enPassantTarget = Square(BitBoard(m.From).Up())
+		} else if m.Special.Has(DoublePawnPush) && p.playerInTurn == Black {
+			p.enPassantTarget = Square(BitBoard(m.From).Down())
 		} else {
-			board.EnPassantTarget = InvalidSquare
+			p.enPassantTarget = InvalidSquare
 		}
 
 		// prevent castling moves:
 		switch m.From {
 		case a1:
-			board.Castling &^= CastleWhiteQueen
+			p.castling &^= CastleWhiteQueen
 		case e1:
-			board.Castling &^= CastleWhiteQueen | CastleWhiteKing
+			p.castling &^= CastleWhiteQueen | CastleWhiteKing
 		case h1:
-			board.Castling &^= CastleWhiteKing
+			p.castling &^= CastleWhiteKing
 		case a8:
-			board.Castling &^= CastleBlackQueen
+			p.castling &^= CastleBlackQueen
 		case e8:
-			board.Castling &^= CastleBlackQueen | CastleBlackKing
+			p.castling &^= CastleBlackQueen | CastleBlackKing
 		case h8:
-			board.Castling &^= CastleBlackKing
+			p.castling &^= CastleBlackKing
 		}
 
 		switch m.To {
 		case a1:
-			board.Castling &^= CastleWhiteQueen
+			p.castling &^= CastleWhiteQueen
 		case h1:
-			board.Castling &^= CastleWhiteKing
+			p.castling &^= CastleWhiteKing
 		case a8:
-			board.Castling &^= CastleBlackQueen
+			p.castling &^= CastleBlackQueen
 		case h8:
-			board.Castling &^= CastleBlackKing
+			p.castling &^= CastleBlackKing
 		}
 
-		board.set(m.To, p)
+		p.set(m.To, prom)
 	}
 
 	// Move done, reset state and recalculate:
-	board.possibleMoves = nil
+	if p.playerInTurn == White {
+		p.playerInTurn = Black
+	} else {
+		p.playerInTurn = White
+	}
 
-	if board.PlayerInTurn == White {
-		board.PlayerInTurn = Black
-		board.ours = board.blackPieces()
-		board.theirs = board.whitePieces()
-		board.all = board.ours | board.theirs
+	p.computeAll()
+}
 
-		board.attacksTo, board.attacksFrom = calculateAttackMaps(
-			board.all,
-			board.whiteKing,
-			board.whiteQueens,
-			board.whiteRooks,
-			board.whiteBishops,
-			board.whiteKnights,
-			board.whitePawns,
+func (p *Position) computeAll() {
+	p.possibleMoves = nil
+
+	if p.playerInTurn == Black {
+		p.ours = p.blackPieces()
+		p.theirs = p.whitePieces()
+		p.all = p.ours | p.theirs
+
+		p.attacksTo, p.attacksFrom = calculateAttackMaps(
+			p.all&^p.blackKing,
+			p.whiteKing,
+			p.whiteQueens,
+			p.whiteRooks,
+			p.whiteBishops,
+			p.whiteKnights,
+			p.whitePawns,
+			White,
+		)
+
+		p.xRayKingAttacks = calculateXRayAttacks(
+			p.blackKing,
+			p.whiteQueens,
+			p.whiteRooks,
+			p.whiteBishops,
 		)
 	} else {
-		board.PlayerInTurn = White
-		board.ours = board.whitePieces()
-		board.theirs = board.blackPieces()
-		board.all = board.ours | board.theirs
+		p.ours = p.whitePieces()
+		p.theirs = p.blackPieces()
+		p.all = p.ours | p.theirs
 
-		board.attacksTo, board.attacksFrom = calculateAttackMaps(
-			board.all,
-			board.blackKing,
-			board.blackQueens,
-			board.blackRooks,
-			board.blackBishops,
-			board.blackKnights,
-			board.blackPawns,
+		p.attacksTo, p.attacksFrom = calculateAttackMaps(
+			p.all&^p.whiteKing,
+			p.blackKing,
+			p.blackQueens,
+			p.blackRooks,
+			p.blackBishops,
+			p.blackKnights,
+			p.blackPawns,
+			Black,
+		)
+
+		p.xRayKingAttacks = calculateXRayAttacks(
+			p.whiteKing,
+			p.blackQueens,
+			p.blackRooks,
+			p.blackBishops,
 		)
 	}
 }
 
+func (p *Position) UndoMove(m Move) {
+
+}
+
+func (p *Position) Equals(other *Position) bool {
+	return p.playerInTurn == other.playerInTurn &&
+		p.whitePawns == other.whitePawns &&
+		p.whiteKnights == other.whiteKnights &&
+		p.whiteBishops == other.whiteBishops &&
+		p.whiteRooks == other.whiteRooks &&
+		p.whiteQueens == other.whiteQueens &&
+		p.whiteKing == other.whiteKing &&
+		p.blackPawns == other.blackPawns &&
+		p.blackKnights == other.blackKnights &&
+		p.blackBishops == other.blackBishops &&
+		p.blackRooks == other.blackRooks &&
+		p.blackQueens == other.blackQueens &&
+		p.blackKing == other.blackKing &&
+		p.castling == other.castling &&
+		p.enPassantTarget == other.enPassantTarget
+}
+
+func (p *Position) Key(m Move) uint64 {
+	return uint64(p.all) ^ uint64(p.castling) ^ uint64(p.enPassantTarget) ^ uint64(p.playerInTurn)
+}
+
 // IsCheck is meant to be called by the visualization and returns true if the current player is in check
 func (p *Position) IsCheck() bool {
-	if p.PlayerInTurn == White {
+	if p.playerInTurn == White {
 		return p.attacksTo.get(p.whiteKing) != 0
 	} else {
 		return p.attacksTo.get(p.blackKing) != 0

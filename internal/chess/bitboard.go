@@ -114,7 +114,7 @@ func (b BitBoard) AntiDiagDown() BitBoard {
 	return b.Down().Left()
 }
 
-// isSameRank efficiently checks whether the two bitboard squares are on the same rank
+// isSameRank checks whether the two bitboard squares are on the same rank
 //
 // this is useful to check whether we accidentally wrapped around from a<->h file
 func (b BitBoard) isSameRank(other BitBoard) bool {
@@ -122,14 +122,35 @@ func (b BitBoard) isSameRank(other BitBoard) bool {
 		return false // one or both is outside of the board
 	}
 
-	// continuously move both to the first rank.
-	for range 8 {
-		b = b >> 8
-		other = other >> 8
+	rank := BitBoard(0xFF)
 
-		if (b > 0) != (other > 0) {
-			return false // one of the two left the board earlier
+	for range 8 {
+		if (rank&b != 0) != (rank&other != 0) {
+			return false
 		}
+
+		rank <<= 8
+	}
+
+	return true
+}
+
+// isSameFile checks whether the two bitboard squares are on the same file
+//
+// this is useful to check whether we accidentally wrapped around from a<->h file
+func (b BitBoard) isSameFile(other BitBoard) bool {
+	if b == 0 || other == 0 {
+		return false // one or both is outside of the board
+	}
+
+	rank := BitBoard(0x0101010101010101)
+
+	for range 8 {
+		if (rank&b != 0) != (rank&other != 0) {
+			return false
+		}
+
+		rank <<= 1
 	}
 
 	return true
