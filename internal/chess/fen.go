@@ -64,7 +64,7 @@ func NewFromFEN(in string) (*Position, error) {
 		return nil, fmt.Errorf("%w: expected FEN with 6 parts", ErrMalformedFEN)
 	}
 
-	b := &Position{}
+	p := &Position{}
 
 	ranks := strings.Split(parts[0], fenRankSeparator)
 
@@ -79,7 +79,7 @@ func NewFromFEN(in string) (*Position, error) {
 			piece, ok := fenPieceTranslation[c]
 
 			if ok {
-				b.set(NewSquareFromIndex(i), piece)
+				p.set(NewSquareFromIndex(i), piece)
 				i++
 				rowLength--
 
@@ -107,11 +107,11 @@ func NewFromFEN(in string) (*Position, error) {
 		return nil, fmt.Errorf("%w: expected a color, got %s", ErrMalformedFEN, parts[1])
 	}
 
-	b.playerInTurn = player
+	p.playerInTurn = player
 
 	// castling
 	if parts[2] == "-" {
-		b.castling = NoCastling
+		p.castling = NoCastling
 	} else if len(parts[2]) <= 4 {
 		for _, c := range parts[2] {
 			castling, ok := fenCastlingAbilityTranslation[c]
@@ -120,7 +120,7 @@ func NewFromFEN(in string) (*Position, error) {
 				return nil, fmt.Errorf("%w: invalid castling ability %c", ErrMalformedFEN, c)
 			}
 
-			b.castling |= castling
+			p.castling |= castling
 		}
 	} else {
 		return nil, fmt.Errorf("%w: expected max 4 chars for castling ability, or '-'", ErrMalformedFEN)
@@ -128,7 +128,7 @@ func NewFromFEN(in string) (*Position, error) {
 
 	// en passant
 	if parts[3] == "-" {
-		b.enPassantTarget = InvalidSquare
+		p.enPassantTarget = InvalidSquare
 	} else {
 		tile, err := ParseSquare(parts[3])
 
@@ -140,7 +140,7 @@ func NewFromFEN(in string) (*Position, error) {
 			return nil, fmt.Errorf("%w: en passant target square must be either rank 3 or 6", ErrMalformedFEN)
 		}
 
-		b.enPassantTarget = tile
+		p.enPassantTarget = tile
 	}
 
 	// halfmove
@@ -150,7 +150,7 @@ func NewFromFEN(in string) (*Position, error) {
 		return nil, fmt.Errorf("%w: half move counter invalid: %s", ErrMalformedFEN, parts[4])
 	}
 
-	b.HalfmoveClock = uint8(halfMoves)
+	p.HalfmoveClock = uint8(halfMoves)
 
 	// fullmove
 	fullMoves, err := strconv.ParseUint(parts[5], 10, 32)
@@ -163,9 +163,7 @@ func NewFromFEN(in string) (*Position, error) {
 		return nil, fmt.Errorf("%w: full move counter must start at 1", ErrMalformedFEN)
 	}
 
-	b.Moves = int(fullMoves)
+	p.Moves = int(fullMoves)
 
-	b.computeAll()
-
-	return b, nil
+	return p, nil
 }

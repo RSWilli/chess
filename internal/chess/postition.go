@@ -4,12 +4,11 @@ import (
 	"strings"
 )
 
-type Position struct {
-	_ [0]func() // equal guard, we have local cached values
-
+// position contains the board representation and the state of the position. This is tracked in the history
+// of [Position] and contains all informations needed for move generation (exept draw by repetition).
+type position struct {
 	// max 50, see https://www.chessprogramming.org/Fifty-move_Rule
 	HalfmoveClock uint8
-	Moves         int
 
 	playerInTurn    Piece
 	castling        CastlingAbility
@@ -28,6 +27,17 @@ type Position struct {
 	blackRooks   BitBoard
 	blackQueens  BitBoard
 	blackKing    BitBoard
+}
+
+type Position struct {
+	_ [0]func() // equal guard, we have local cached values
+
+	position
+
+	Moves int
+
+	// history contains the previous positions in a stack, useful for [Position.UndoMove]
+	history []position
 
 	// Calculated properties, will be reset after a move is done:
 
@@ -52,8 +62,8 @@ type Position struct {
 }
 
 func New() *Position {
-	// b, err := NewFromFEN(DefaultFen)
-	b, err := NewFromFEN("r3k2r/4qn2/p1p1b2p/6pB/P1p5/2P5/5PPP/RQ2R1K1 b kq - 0 1")
+	b, err := NewFromFEN(DefaultFen)
+	// b, err := NewFromFEN("r3k2r/4qn2/p1p1b2p/6pB/P1p5/2P5/5PPP/RQ2R1K1 b kq - 0 1")
 
 	if err != nil {
 		panic(err)
@@ -66,13 +76,18 @@ func (p Position) String() string {
 	sb := strings.Builder{}
 
 	for rank := range 8 {
+		sb.WriteString("+---+---+---+---+---+---+---+---+\n|")
 		for file := range 8 {
 			piece := p.Square(NewSquare(rank, file))
-
+			sb.WriteRune(' ')
 			sb.WriteRune(piece.Rune())
+			sb.WriteRune(' ')
+			sb.WriteRune('|')
 		}
 		sb.WriteByte('\n')
 	}
+	sb.WriteString("+---+---+---+---+---+---+---+---+\n")
+
 	switch p.playerInTurn {
 	case White:
 		sb.WriteString("White\n")
@@ -201,6 +216,10 @@ var e8 = MustParseSquare("e8")
 var h8 = MustParseSquare("h8")
 
 func (p *Position) DoMove(m Move) {
+	p.history = append(p.history, p.position)
+
+	pawnMove := false
+
 	if m.Special.Has(CastleLong | CastleShort) {
 		// Castling move:
 		if p.playerInTurn == White && m.Special == CastleShort {
@@ -240,7 +259,11 @@ func (p *Position) DoMove(m Move) {
 			p.castling &^= CastleBlackKing | CastleBlackQueen
 		}
 	} else {
-		prom := p.Square(m.From)
+		piece := p.Square(m.From)
+
+		if piece == Pawn {
+			pawnMove = true
+		}
 
 		// clear the old square
 		p.unset(m.From)
@@ -249,13 +272,13 @@ func (p *Position) DoMove(m Move) {
 
 		switch {
 		case m.Special.Has(PromoteQueen):
-			prom = Queen | p.playerInTurn
+			piece = Queen | p.playerInTurn
 		case m.Special.Has(PromoteRook):
-			prom = Rook | p.playerInTurn
+			piece = Rook | p.playerInTurn
 		case m.Special.Has(PromoteKnight):
-			prom = Knight | p.playerInTurn
+			piece = Knight | p.playerInTurn
 		case m.Special.Has(PromoteBishop):
-			prom = Bishop | p.playerInTurn
+			piece = Bishop | p.playerInTurn
 		}
 
 		// remove the en-passant captured pawn, no need to check for the piece type since the en passant
@@ -302,7 +325,19 @@ func (p *Position) DoMove(m Move) {
 			p.castling &^= CastleBlackKing
 		}
 
-		p.set(m.To, prom)
+		p.set(m.To, piece)
+	}
+
+	// halfmove clock for 50 move rule, see https://www.chessprogramming.org/Halfmove_Clock
+	previousCastling := p.history[len(p.history)-1].castling & (CastleWhiteQueen | CastleWhiteKing | CastleBlackQueen | CastleBlackKing)
+	nowCastling := p.castling & (CastleWhiteQueen | CastleWhiteKing | CastleBlackQueen | CastleBlackKing)
+
+	lostCastling := previousCastling != nowCastling
+
+	if !pawnMove || lostCastling {
+		p.HalfmoveClock++
+	} else {
+		p.HalfmoveClock = 0
 	}
 
 	// Move done, reset state and recalculate:
@@ -312,11 +347,23 @@ func (p *Position) DoMove(m Move) {
 		p.playerInTurn = White
 	}
 
-	p.computeAll()
+	p.reset()
+}
+
+func (p *Position) reset() {
+	p.possibleMoves = nil
+
+	p.attacksFrom = squareLookup[BitBoard]{}
+	p.attacksTo = squareLookup[BitBoard]{}
+
+	p.ours = 0
+	p.theirs = 0
+	p.all = 0
+	p.xRayKingAttacks = nil
 }
 
 func (p *Position) computeAll() {
-	p.possibleMoves = nil
+	p.reset()
 
 	if p.playerInTurn == Black {
 		p.ours = p.blackPieces()
@@ -324,6 +371,8 @@ func (p *Position) computeAll() {
 		p.all = p.ours | p.theirs
 
 		p.attacksTo, p.attacksFrom = calculateAttackMaps(
+			// we need to exclude our king so that it wont count as blocking an
+			// enemy's sliding piece attack
 			p.all&^p.blackKing,
 			p.whiteKing,
 			p.whiteQueens,
@@ -346,6 +395,8 @@ func (p *Position) computeAll() {
 		p.all = p.ours | p.theirs
 
 		p.attacksTo, p.attacksFrom = calculateAttackMaps(
+			// we need to exclude our king so that it wont count as blocking an
+			// enemy's sliding piece attack
 			p.all&^p.whiteKing,
 			p.blackKing,
 			p.blackQueens,
@@ -365,26 +416,22 @@ func (p *Position) computeAll() {
 	}
 }
 
-func (p *Position) UndoMove(m Move) {
+func (p *Position) UndoMove() {
+	if p.Moves == 0 || len(p.history) == 0 {
+		// this is a programming error, so we panic here
+		panic("cannot undo move, none was done")
+	}
 
+	lastPos := p.history[len(p.history)-1]
+	p.history = p.history[:len(p.history)-1]
+
+	p.position = lastPos
+
+	p.reset()
 }
 
 func (p *Position) Equals(other *Position) bool {
-	return p.playerInTurn == other.playerInTurn &&
-		p.whitePawns == other.whitePawns &&
-		p.whiteKnights == other.whiteKnights &&
-		p.whiteBishops == other.whiteBishops &&
-		p.whiteRooks == other.whiteRooks &&
-		p.whiteQueens == other.whiteQueens &&
-		p.whiteKing == other.whiteKing &&
-		p.blackPawns == other.blackPawns &&
-		p.blackKnights == other.blackKnights &&
-		p.blackBishops == other.blackBishops &&
-		p.blackRooks == other.blackRooks &&
-		p.blackQueens == other.blackQueens &&
-		p.blackKing == other.blackKing &&
-		p.castling == other.castling &&
-		p.enPassantTarget == other.enPassantTarget
+	return p.position == other.position
 }
 
 func (p *Position) Key(m Move) uint64 {
@@ -408,4 +455,15 @@ func (p *Position) IsCheckMate() bool {
 // IsDraw is meant to be called by the visualization and returns true if the game is drewn
 func (p *Position) IsDraw() bool {
 	return !p.IsCheck() && len(p.GenerateMoves()) == 0
+}
+
+func (p *Position) Copy() *Position {
+	c := *p
+
+	historyCopy := make([]position, len(c.history))
+	copy(historyCopy, c.history)
+
+	c.reset()
+
+	return &c
 }

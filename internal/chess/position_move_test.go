@@ -11,6 +11,29 @@ import (
 )
 
 func TestDoUndoMoves(t *testing.T) {
+	chesstest.RunAll(t, func(t *testing.T, fen string) {
+		board, err := chess.NewFromFEN(fen)
+
+		if err != nil {
+			t.Fatal("could not init FEN: " + err.Error())
+		}
+
+		moves := board.GenerateMoves()
+
+		copy := board.Copy()
+
+		for _, m := range moves {
+			copy.DoMove(m)
+			copy.UndoMove()
+
+			if !copy.Equals(board) {
+				t.Logf("expected:\n%s", board.String())
+				t.Logf("got:\n%s", copy.String())
+
+				t.Fatalf("move %s was not undone correctly", m)
+			}
+		}
+	})
 }
 
 func TestLegalMoveGen(t *testing.T) {

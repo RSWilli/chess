@@ -4,7 +4,10 @@ func (p *Position) GenerateMoves() []Move {
 	if p.possibleMoves != nil {
 		return p.possibleMoves
 	}
-	// TODO: 50 move rule, draw by material
+
+	p.computeAll()
+
+	// TODO: 50 move rule, draw by material, draw by repetition
 	p.possibleMoves = make([]Move, 0, maxMoveCount)
 
 	if p.playerInTurn == White {
@@ -80,9 +83,11 @@ func (p *Position) generatePawnMoves(from, pushed, doublePushed, doublePushRank,
 		}
 
 		taken := Empty
+		special := Captures
 
 		if p.enPassantTarget == Square(t) {
 			taken = Pawn
+			special |= EnPassant
 		} else {
 			taken = p.Square(Square(t))
 		}
@@ -90,7 +95,7 @@ func (p *Position) generatePawnMoves(from, pushed, doublePushed, doublePushRank,
 		m := Move{
 			From:    Square(from),
 			To:      Square(t),
-			Special: Captures,
+			Special: special,
 			Takes:   taken,
 		}
 

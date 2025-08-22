@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-type MoveSpecial uint8
+type MoveSpecial uint16
 
 func (c MoveSpecial) Has(other MoveSpecial) bool {
 	return c&other != 0
@@ -16,6 +16,7 @@ const (
 
 	Captures MoveSpecial = 1 << (iota - 1)
 	DoublePawnPush
+	EnPassant
 
 	PromoteQueen
 	PromoteRook
