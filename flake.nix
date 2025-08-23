@@ -14,10 +14,11 @@
   in {
     devShells."${system}".default = let
       pkgs = nixpkgs.legacyPackages.${system};
+      local_go = pkgs.go_1_25;
     in
       pkgs.mkShell {
         packages = with pkgs; [
-          go
+          local_go
           stockfish
           rlwrap # for terminal command history inside stockfish
         ];
@@ -29,7 +30,7 @@
         hardeningDisable = ["fortify"];
 
         shellHook = ''
-          ${pkgs.go}/bin/go version
+          ${local_go}/bin/go version
         '';
       };
   };
