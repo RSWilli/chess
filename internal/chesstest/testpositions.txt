@@ -1,3 +1,5 @@
+# Default position:
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -
 #
 # Source: https://www.chessprogramming.org/Eigenmann_Rapid_Engine_Test
 #
