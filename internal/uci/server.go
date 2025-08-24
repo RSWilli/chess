@@ -72,10 +72,14 @@ func (s *Server) handleCommand(line string) error {
 	if line == "uci" {
 		return s.respond("uciok")
 	}
+	if line == "ucinewgame" {
+		s.h.NewGame()
+		return nil
+	}
 	if line == "quit" {
 		return fmt.Errorf("server closed by user")
 	}
-	if line == "ready" {
+	if line == "isready" {
 		err := s.h.Ready()
 
 		if err != nil {
@@ -85,11 +89,49 @@ func (s *Server) handleCommand(line string) error {
 		return s.respond("readyok")
 	}
 
+	if strings.HasPrefix(line, "position") {
+		return s.handlePositionCommand(line)
+	}
+
 	if strings.HasPrefix(line, "go") {
 		return s.handleGoCommand(line)
 	}
 
 	return fmt.Errorf("unexpected command received: %s", line)
+}
+
+func (s *Server) handlePositionCommand(line string) error {
+	// cases:
+	// position startpos
+	// position startpos moves
+	// position startpos moves a1a3 a4g6
+	// position fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+	// position fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 moves
+	// position fen rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 moves a1a3 a4g6
+
+	parts := strings.Split(line, " moves")
+
+	if len(parts) > 2 {
+		return fmt.Errorf("malformed position command")
+	}
+
+	var moves []string
+
+	if len(parts) > 1 {
+		moves = strings.Fields(parts[1])
+	}
+
+	var fen string
+
+	if cut, ok := strings.CutPrefix(parts[0], "position fen "); ok {
+		fen = cut
+	} else if cut, ok := strings.CutPrefix(parts[0], "position "); ok {
+		fen = cut
+	} else {
+		return fmt.Errorf("malformed position command")
+	}
+
+	return s.h.Position(fen, moves)
 }
 
 func (s *Server) handleGoCommand(line string) error {

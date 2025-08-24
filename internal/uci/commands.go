@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding"
 	"fmt"
+	"maps"
+	"slices"
 )
 
 type Info struct {
@@ -47,7 +49,10 @@ type PerftResult struct {
 // MarshalText implements encoding.TextMarshaler.
 func (p *PerftResult) String() string {
 	var text []byte
-	for move, count := range p.Moves {
+
+	for _, move := range slices.Sorted(maps.Keys(p.Moves)) {
+		count := p.Moves[move]
+
 		text = fmt.Appendf(text, "%s: %d\n", move, count)
 	}
 

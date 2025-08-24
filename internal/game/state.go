@@ -47,7 +47,7 @@ func (s *State) Render() ([]byte, error) {
 
 func New() *State {
 	s := &State{
-		currentBoard:  chess.New(),
+		currentBoard:  chess.NewPosition(),
 		currentSquare: chess.InvalidSquare,
 	}
 

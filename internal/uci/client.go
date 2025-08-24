@@ -102,7 +102,16 @@ func (c *Client) waitForReady() error {
 }
 
 func (c *Client) NewGame() error {
-	return c.writeCommand("ucinewgame")
+	err := c.writeCommand("ucinewgame")
+
+	if err != nil {
+		return err
+	}
+
+	// https://official-stockfish.github.io/docs/stockfish-wiki/UCI-&-Commands.html#ucinewgame
+	// > GUI should always send isready after ucinewgame
+
+	return c.waitForReady()
 }
 
 func (c *Client) Perft(depth int) (PerftResult, error) {
@@ -272,7 +281,7 @@ func (c *Client) Position(fen string, moves []string) error {
 		return err
 	}
 
-	return c.waitForReady()
+	return nil
 }
 
 // func (c *Client) readInfo() (Info, error) {

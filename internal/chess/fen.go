@@ -11,7 +11,12 @@ const DefaultFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 // maxMovesFen is the position with the most number of legal moves for white
 // const maxMovesFen = "R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1 w - - 0 1"
-const maxMoveCount = 218
+// const maxMoveCount = 218
+
+// maxMoveCount adds a bit of padding to the maximum moves from the FEN
+//
+// This is used to initialize the array backing the moves slice
+const maxMoveCount = 256
 
 var fenPieceTranslation = map[rune]Piece{
 	'r': BlackRook,
@@ -56,8 +61,8 @@ var fenCastlingAbilityTranslation = map[rune]CastlingAbility{
 
 var ErrMalformedFEN = errors.New("given FEN is malformed")
 
-// NewFromFEN parses the given FEN string as defined in https://www.chessprogramming.org/Forsyth-Edwards_Notation
-func NewFromFEN(in string) (*Position, error) {
+// NewPositionFromFEN parses the given FEN string as defined in https://www.chessprogramming.org/Forsyth-Edwards_Notation
+func NewPositionFromFEN(in string) (*Position, error) {
 	parts := strings.Split(in, " ")
 
 	if len(parts) != 6 {

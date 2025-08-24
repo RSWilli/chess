@@ -40,6 +40,8 @@ var InvalidMove = Move{From: InvalidSquare, To: InvalidSquare}
 
 // ParseMove parses a move given in pure coordinate notation
 // see https://www.chessprogramming.org/Algebraic_Chess_Notation#Pure_coordinate_notation
+//
+// for castling, enpassant etc. moves the current position is important, so this cannot parse those. See [Position.ParseMove] instead
 func ParseMove(in string) (Move, error) {
 	if len(in) != 4 && len(in) != 5 {
 		return InvalidMove, ErrInvalidMove
