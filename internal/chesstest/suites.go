@@ -17,7 +17,7 @@ func init() {
 			continue
 		}
 
-		Suites = append(Suites, l+" 0 1")
+		Suites = append(Suites, l)
 	}
 }
 
