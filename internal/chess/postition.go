@@ -166,6 +166,21 @@ func (p *position) removeCastling(ab CastlingAbility) {
 	}
 }
 
+func (p *position) clearEnpassant() {
+	if p.enPassantTarget != InvalidSquare {
+		// the hash contains the en passant square, so clear it
+		p.HashKey = p.HashKey.Update(zobrist.EnPassantAFile + p.enPassantTarget.file())
+		p.enPassantTarget = InvalidSquare
+	}
+}
+
+func (p *position) setEnpassant(sq Square) {
+	p.clearEnpassant()
+
+	p.enPassantTarget = sq
+	p.HashKey = p.HashKey.Update(zobrist.EnPassantAFile + p.enPassantTarget.file())
+}
+
 func (p *position) whitePieces() BitBoard {
 	return p.whitePawns |
 		p.whiteKnights |

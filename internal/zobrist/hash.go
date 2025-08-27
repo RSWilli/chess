@@ -1,16 +1,29 @@
 // package zobrist implements zobrist hashing https://www.chessprogramming.org/Zobrist_Hashing for hashing the contents of a chessboard
 package zobrist
 
-import "math/rand/v2"
+import (
+	"math/rand/v2"
+)
 
 var gen = rand.NewChaCha8([32]byte{1, 4, 0, 8, 1, 9, 9, 7})
 
 var randoms []uint64
 
 func init() {
-	for range lastOffset - 1 {
+	for range lastOffset {
 		randoms = append(randoms, gen.Uint64())
 	}
+
+	Default = NewBoard(
+		BlackRook, BlackKnight, BlackBishop, BlackQueen, BlackKing, BlackBishop, BlackKnight, BlackRook,
+		BlackPawn, BlackPawn, BlackPawn, BlackPawn, BlackPawn, BlackPawn, BlackPawn, BlackPawn,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		-1, -1, -1, -1, -1, -1, -1, -1,
+		WhitePawn, WhitePawn, WhitePawn, WhitePawn, WhitePawn, WhitePawn, WhitePawn, WhitePawn,
+		WhiteRook, WhiteKnight, WhiteBishop, WhiteQueen, WhiteKing, WhiteBishop, WhiteKnight, WhiteRook,
+	) ^ WhiteCastleKing ^ BlackCastleKing ^ WhiteCastleQueen ^ BlackCastleQueen
 }
 
 // The offsets for the random hash values. Piece types are spaced out in a way that there is enough space for the square offsets between them.
@@ -28,7 +41,12 @@ const (
 	WhitePawn
 	BlackPawn
 
-	BlackToMove = BlackPawn + iota
+	// piecesOffsetEnd is the first index that can be used for the other numbers, as until this index is used by [BlackPawn]
+	piecesOffsetEnd
+)
+
+const (
+	BlackToMove = piecesOffsetEnd + iota
 
 	WhiteCastleKing
 	BlackCastleKing
@@ -82,13 +100,4 @@ func NewBoard(pieces ...int) Hash {
 }
 
 // Default is the hash for the starting position
-var Default = NewBoard(
-	BlackRook, BlackKnight, BlackBishop, BlackQueen, BlackKing, BlackBishop, BlackKnight, BlackRook,
-	BlackPawn, BlackPawn, BlackPawn, BlackPawn, BlackPawn, BlackPawn, BlackPawn, BlackPawn,
-	-1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1,
-	-1, -1, -1, -1, -1, -1, -1, -1,
-	WhitePawn, WhitePawn, WhitePawn, WhitePawn, WhitePawn, WhitePawn, WhitePawn, WhitePawn,
-	WhiteRook, WhiteKnight, WhiteBishop, WhiteQueen, WhiteKing, WhiteBishop, WhiteKnight, WhiteRook,
-) ^ WhiteCastleKing ^ BlackCastleKing ^ WhiteCastleQueen ^ BlackCastleQueen
+var Default Hash

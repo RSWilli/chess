@@ -31,7 +31,7 @@ type Game struct {
 
 func NewGame() *Game {
 	b, err := NewGameFromFEN(DefaultFen)
-	// b, err := NewGameFromFEN("2k5/8/8/1BR2q2/8/8/1PKP1N2/8 w - - 0 1")
+	// b, err := NewGameFromFEN("r3kbnr/1b3ppp/pqn5/1pp1P3/3p4/1BN2N2/PP2QPPP/R1BR2K1 w kq - 0 1")
 
 	if err != nil {
 		panic(err)
@@ -87,6 +87,8 @@ func (p *Game) DoMove(m Move) {
 			p.removeCastling(CastleBlackKing)
 			p.removeCastling(CastleBlackQueen)
 		}
+
+		p.clearEnpassant()
 	} else {
 		piece := p.Square(m.From)
 
@@ -117,26 +119,13 @@ func (p *Game) DoMove(m Move) {
 			p.unset(Square(BitBoard(m.To).Up()))
 		}
 
-		oldEnpassantTarget := p.enPassantTarget
-
 		// save the en passant square for the move generation of the en passant moves
 		if m.Special.Has(DoublePawnPush) && p.PlayerInTurn == White {
-			p.enPassantTarget = Square(BitBoard(m.From).Up())
+			p.setEnpassant(Square(BitBoard(m.From).Up()))
 		} else if m.Special.Has(DoublePawnPush) && p.PlayerInTurn == Black {
-			p.enPassantTarget = Square(BitBoard(m.From).Down())
+			p.setEnpassant(Square(BitBoard(m.From).Down()))
 		} else {
-			p.enPassantTarget = InvalidSquare
-		}
-
-		// update en passant hash:
-		if oldEnpassantTarget != InvalidSquare {
-			// remove the old target
-			p.HashKey = p.HashKey.Update(zobrist.EnPassantAFile + oldEnpassantTarget.file())
-		}
-
-		if p.enPassantTarget != InvalidSquare {
-			// set the new target
-			p.HashKey = p.HashKey.Update(zobrist.EnPassantAFile + p.enPassantTarget.file())
+			p.clearEnpassant()
 		}
 
 		// prevent castling moves, but only if set because the hash update depends on it:
