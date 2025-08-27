@@ -13,7 +13,9 @@
     system = "x86_64-linux";
   in {
     devShells."${system}".default = let
-      pkgs = nixpkgs.legacyPackages.${system};
+      pkgs = import nixpkgs {
+        inherit system;
+      };
       local_go = pkgs.go_1_25;
     in
       pkgs.mkShell {
