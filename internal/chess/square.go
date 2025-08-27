@@ -15,15 +15,20 @@ const InvalidSquare Square = 0
 const files = "abcdefgh"
 const ranks = "87654321"
 
+// index returns the index of the square starting from the top left corner of the board
+func (t Square) index() int {
+	return bits.Len64(uint64(t)) - 1
+}
+
 // rank returns the index of the rank of the square from 8 to 1
 func (t Square) rank() int {
-	i := bits.Len64(uint64(t)) - 1
+	i := t.index()
 	return int(uint64(i) / 8)
 }
 
 // file returns the index of the file of the square from a to h
 func (t Square) file() int {
-	i := bits.Len64(uint64(t)) - 1
+	i := t.index()
 	return int(uint64(i) % 8)
 }
 

@@ -61,15 +61,15 @@ var fenCastlingAbilityTranslation = map[rune]CastlingAbility{
 
 var ErrMalformedFEN = errors.New("given FEN is malformed")
 
-// NewPositionFromFEN parses the given FEN string as defined in https://www.chessprogramming.org/Forsyth-Edwards_Notation
-func NewPositionFromFEN(in string) (*Position, error) {
+// NewGameFromFEN parses the given FEN string as defined in https://www.chessprogramming.org/Forsyth-Edwards_Notation
+func NewGameFromFEN(in string) (*Game, error) {
 	parts := strings.Split(in, " ")
 
 	if len(parts) != 6 {
 		return nil, fmt.Errorf("%w: expected FEN with 6 parts", ErrMalformedFEN)
 	}
 
-	p := &Position{}
+	p := &Game{}
 
 	ranks := strings.Split(parts[0], fenRankSeparator)
 
@@ -112,7 +112,7 @@ func NewPositionFromFEN(in string) (*Position, error) {
 		return nil, fmt.Errorf("%w: expected a color, got %s", ErrMalformedFEN, parts[1])
 	}
 
-	p.playerInTurn = player
+	p.PlayerInTurn = player
 
 	// castling
 	if parts[2] == "-" {
@@ -169,6 +169,8 @@ func NewPositionFromFEN(in string) (*Position, error) {
 	}
 
 	p.Moves = int(fullMoves)
+
+	p.hashFull()
 
 	return p, nil
 }

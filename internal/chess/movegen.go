@@ -2,7 +2,7 @@ package chess
 
 import "fmt"
 
-func (p *Position) GenerateMoves() []Move {
+func (p *Game) GenerateMoves() []Move {
 	p.computeAll() // TODO: do this cleverly in [Position.DoMove] and [Position.UndoMove]
 
 	// TODO: 50 move rule, draw by material, draw by repetition
@@ -17,7 +17,7 @@ func (p *Position) GenerateMoves() []Move {
 	return legalMoves
 }
 
-func (p *Position) generateMovesForPiece(piece Piece, at BitBoard, legalMoves *[]Move) {
+func (p *Game) generateMovesForPiece(piece Piece, at BitBoard, legalMoves *[]Move) {
 	switch piece {
 	case WhitePawn:
 		p.generateWhitePawnMoves(at, legalMoves)
@@ -43,7 +43,7 @@ func (p *Position) generateMovesForPiece(piece Piece, at BitBoard, legalMoves *[
 	}
 }
 
-func (p *Position) generatePawnMoves(from, pushed, doublePushed, doublePushRank, promoteRank, opposing BitBoard, legalMoves *[]Move) {
+func (p *Game) generatePawnMoves(from, pushed, doublePushed, doublePushRank, promoteRank, opposing BitBoard, legalMoves *[]Move) {
 	all := p.all()
 
 	if from&doublePushRank != 0 && all&pushed == 0 && all&doublePushed == 0 {
@@ -139,11 +139,11 @@ func (p *Position) generatePawnMoves(from, pushed, doublePushed, doublePushRank,
 const rank7BitBoard BitBoard = 0xff00
 const rank2BitBoard BitBoard = 0xff000000000000
 
-func (p *Position) generateWhitePawnMoves(bb BitBoard, legalMoves *[]Move) {
+func (p *Game) generateWhitePawnMoves(bb BitBoard, legalMoves *[]Move) {
 	p.generatePawnMoves(bb, bb.Up(), bb.Up().Up(), rank2BitBoard, rank7BitBoard, p.blackPieces(), legalMoves)
 }
 
-func (p *Position) generateBlackPawnMoves(bb BitBoard, legalMoves *[]Move) {
+func (p *Game) generateBlackPawnMoves(bb BitBoard, legalMoves *[]Move) {
 	p.generatePawnMoves(bb, bb.Down(), bb.Down().Down(), rank7BitBoard, rank2BitBoard, p.whitePieces(), legalMoves)
 }
 
@@ -165,7 +165,7 @@ var (
 )
 
 // notAttacked returns true if none of the squares set in the given bitboard are attacked
-func (p *Position) notAttacked(bb BitBoard) bool {
+func (p *Game) notAttacked(bb BitBoard) bool {
 	for sq := range bb.Ones() {
 		if p.attacksTo.get(sq) != 0 {
 			return false
@@ -174,22 +174,22 @@ func (p *Position) notAttacked(bb BitBoard) bool {
 	return true
 }
 
-func (p *Position) canCastleWhiteKing() bool {
+func (p *Game) canCastleWhiteKing() bool {
 	return p.whiteKing == BitBoard(e1) && p.castling.Has(CastleWhiteKing) && p.all()&whiteCastleKing == 0 && p.notAttacked(whiteCastleKing)
 }
 
-func (p *Position) canCastleWhiteQueen() bool {
+func (p *Game) canCastleWhiteQueen() bool {
 	return p.whiteKing == BitBoard(e1) && p.castling.Has(CastleWhiteQueen) && p.all()&whiteCastleQueen == 0 && p.notAttacked(whiteCastleQueen)
 }
-func (p *Position) canCastleBlackKing() bool {
+func (p *Game) canCastleBlackKing() bool {
 	return p.blackKing == BitBoard(e8) && p.castling.Has(CastleBlackKing) && p.all()&blackCastleKing == 0 && p.notAttacked(blackCastleKing)
 }
 
-func (p *Position) canCastleBlackQueen() bool {
+func (p *Game) canCastleBlackQueen() bool {
 	return p.blackKing == BitBoard(e8) && p.castling.Has(CastleBlackQueen) && p.all()&blackCastleQueen == 0 && p.notAttacked(blackCastleQueen)
 }
 
-func (p *Position) generateKingMoves(bb BitBoard, legalMoves *[]Move) {
+func (p *Game) generateKingMoves(bb BitBoard, legalMoves *[]Move) {
 	if bb.Count() != 1 {
 		panic("expected 1 king")
 	}
@@ -235,7 +235,7 @@ func (p *Position) generateKingMoves(bb BitBoard, legalMoves *[]Move) {
 	}
 
 	// white O-O, aka e1g1
-	if p.playerInTurn == White && p.canCastleWhiteKing() {
+	if p.PlayerInTurn == White && p.canCastleWhiteKing() {
 		*legalMoves = append(*legalMoves, Move{
 			From:    e1,
 			To:      whiteCastleKingKingTarget,
@@ -244,7 +244,7 @@ func (p *Position) generateKingMoves(bb BitBoard, legalMoves *[]Move) {
 	}
 
 	// white O-O-O, aka e1c1
-	if p.playerInTurn == White && p.canCastleWhiteQueen() {
+	if p.PlayerInTurn == White && p.canCastleWhiteQueen() {
 		*legalMoves = append(*legalMoves, Move{
 			From:    e1,
 			To:      whiteCastleQueenKingTarget,
@@ -253,7 +253,7 @@ func (p *Position) generateKingMoves(bb BitBoard, legalMoves *[]Move) {
 	}
 
 	// black O-O, aka e8g8
-	if p.playerInTurn == Black && p.canCastleBlackKing() {
+	if p.PlayerInTurn == Black && p.canCastleBlackKing() {
 		*legalMoves = append(*legalMoves, Move{
 			From:    e8,
 			To:      blackCastleKingKingTarget,
@@ -262,7 +262,7 @@ func (p *Position) generateKingMoves(bb BitBoard, legalMoves *[]Move) {
 	}
 
 	// black O-O-O, aka e8c8
-	if p.playerInTurn == Black && p.canCastleBlackQueen() {
+	if p.PlayerInTurn == Black && p.canCastleBlackQueen() {
 		*legalMoves = append(*legalMoves, Move{
 			From:    e8,
 			To:      blackCastleQueenKingTarget,
@@ -271,7 +271,7 @@ func (p *Position) generateKingMoves(bb BitBoard, legalMoves *[]Move) {
 	}
 }
 
-func (p *Position) generateKnightMoves(knight BitBoard, legalMoves *[]Move) {
+func (p *Game) generateKnightMoves(knight BitBoard, legalMoves *[]Move) {
 	for t := range knightMoves(knight).Ones() {
 		if t == 0 {
 			// wrapped around
@@ -306,7 +306,7 @@ func (p *Position) generateKnightMoves(knight BitBoard, legalMoves *[]Move) {
 	}
 }
 
-func (p *Position) generateRookMoves(rook BitBoard, legalMoves *[]Move) {
+func (p *Game) generateRookMoves(rook BitBoard, legalMoves *[]Move) {
 	targets := rookMoves(rook, p.ours(), p.theirs())
 
 	for t := range targets.Ones() {
@@ -333,7 +333,7 @@ func (p *Position) generateRookMoves(rook BitBoard, legalMoves *[]Move) {
 	}
 }
 
-func (p *Position) generateQueenMoves(queen BitBoard, legalMoves *[]Move) {
+func (p *Game) generateQueenMoves(queen BitBoard, legalMoves *[]Move) {
 	targets := queenMoves(queen, p.ours(), p.theirs())
 
 	for t := range targets.Ones() {
@@ -360,7 +360,7 @@ func (p *Position) generateQueenMoves(queen BitBoard, legalMoves *[]Move) {
 	}
 }
 
-func (p *Position) generateBishopMoves(bishop BitBoard, legalMoves *[]Move) {
+func (p *Game) generateBishopMoves(bishop BitBoard, legalMoves *[]Move) {
 	targets := bishopMoves(bishop, p.ours(), p.theirs())
 
 	for t := range targets.Ones() {
@@ -389,10 +389,10 @@ func (p *Position) generateBishopMoves(bishop BitBoard, legalMoves *[]Move) {
 
 // isLegalMove checks if the move would leave the king in check. This does not correctly
 // check king moves or en passant captures.
-func (p *Position) isLegalMove(m Move) bool {
+func (p *Game) isLegalMove(m Move) bool {
 	var ourKing BitBoard
 
-	if p.playerInTurn == White {
+	if p.PlayerInTurn == White {
 		ourKing = p.whiteKing
 	} else {
 		ourKing = p.blackKing

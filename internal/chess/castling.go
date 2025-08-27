@@ -1,5 +1,11 @@
 package chess
 
+import (
+	"fmt"
+
+	"github.com/rswilli/chess/internal/zobrist"
+)
+
 type CastlingAbility uint8
 
 const (
@@ -36,4 +42,19 @@ func (c CastlingAbility) String() string {
 	}
 
 	return s
+}
+
+func (c CastlingAbility) zobrist() int {
+	switch c {
+	case CastleBlackKing:
+		return zobrist.BlackCastleKing
+	case CastleBlackQueen:
+		return zobrist.BlackCastleQueen
+	case CastleWhiteKing:
+		return zobrist.WhiteCastleKing
+	case CastleWhiteQueen:
+		return zobrist.WhiteCastleQueen
+	default:
+		panic(fmt.Sprintf("unexpected chess.CastlingAbility: %#v", c))
+	}
 }

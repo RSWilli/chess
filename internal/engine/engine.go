@@ -1,18 +1,19 @@
-package chess
+package engine
 
 import (
 	"fmt"
 
+	"github.com/rswilli/chess/internal/chess"
 	"github.com/rswilli/chess/internal/uci"
 )
 
 type Engine struct {
-	pos *Position
+	pos *chess.Game
 }
 
 func NewEngine() *Engine {
 	return &Engine{
-		pos: NewPosition(),
+		pos: chess.NewGame(),
 	}
 }
 
@@ -23,7 +24,7 @@ func (e *Engine) Go(options uci.GoOptions) (uci.GoResponse, error) {
 
 // NewGame implements uci.Engine.
 func (e *Engine) NewGame() error {
-	e.pos = NewPosition()
+	e.pos = chess.NewGame()
 
 	// clear all caches here
 
@@ -78,10 +79,10 @@ func (e *Engine) internalPerft(depth int) int {
 // Position implements uci.Engine.
 func (e *Engine) Position(fen string, moves []string) error {
 	if fen == uci.StartPosition {
-		e.pos = NewPosition()
+		e.pos = chess.NewGame()
 		return nil
 	} else {
-		pos, err := NewPositionFromFEN(fen)
+		pos, err := chess.NewGameFromFEN(fen)
 
 		if err != nil {
 			return fmt.Errorf("could not parse FEN: %v", err)

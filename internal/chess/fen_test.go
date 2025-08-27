@@ -8,7 +8,7 @@ import (
 )
 
 func TestBoard(t *testing.T) {
-	b := chess.NewPosition()
+	b := chess.NewGame()
 
 	fmt.Println(b)
 }
@@ -21,7 +21,7 @@ func TestBoardFENs(t *testing.T) {
 	}
 
 	for _, fen := range fens {
-		b, err := chess.NewPositionFromFEN(fen)
+		b, err := chess.NewGameFromFEN(fen)
 
 		if err != nil {
 			t.Fatal(err)

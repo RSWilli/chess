@@ -1,6 +1,10 @@
 package chess
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/rswilli/chess/internal/zobrist"
+)
 
 type Piece uint8
 
@@ -38,6 +42,42 @@ func (p Piece) Rune() rune {
 		return '♞'
 	case BlackPawn:
 		return '♟'
+	default:
+		panic(fmt.Sprintf("unexpected chess.Piece: %#v", p))
+	}
+}
+
+// zobrist returns the zobrist offset, see [zobrist.NewBoard]
+func (p Piece) zobrist() int {
+	switch p {
+	case Empty:
+		return -1
+
+	case WhiteKing:
+		return zobrist.WhiteKing
+	case WhiteQueen:
+		return zobrist.WhiteQueen
+	case WhiteRook:
+		return zobrist.WhiteRook
+	case WhiteBishop:
+		return zobrist.WhiteBishop
+	case WhiteKnight:
+		return zobrist.WhiteKnight
+	case WhitePawn:
+		return zobrist.WhitePawn
+
+	case BlackKing:
+		return zobrist.BlackKing
+	case BlackQueen:
+		return zobrist.BlackQueen
+	case BlackRook:
+		return zobrist.BlackRook
+	case BlackBishop:
+		return zobrist.BlackBishop
+	case BlackKnight:
+		return zobrist.BlackKnight
+	case BlackPawn:
+		return zobrist.BlackPawn
 	default:
 		panic(fmt.Sprintf("unexpected chess.Piece: %#v", p))
 	}

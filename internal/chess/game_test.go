@@ -12,7 +12,7 @@ import (
 
 func TestDoUndoMoves(t *testing.T) {
 	chesstest.RunAll(t, func(t *testing.T, fen string) {
-		board, err := chess.NewPositionFromFEN(fen)
+		board, err := chess.NewGameFromFEN(fen)
 
 		if err != nil {
 			t.Fatal("could not init FEN: " + err.Error())
@@ -46,7 +46,7 @@ func TestLegalMoveGen(t *testing.T) {
 	chesstest.RunAll(t, func(t *testing.T, fen string) {
 		must(stockfish.NewGame())
 		must(stockfish.Position(fen, nil))
-		board, err := chess.NewPositionFromFEN(fen)
+		board, err := chess.NewGameFromFEN(fen)
 
 		if err != nil {
 			t.Fatal("could not init FEN: " + err.Error())

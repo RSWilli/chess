@@ -10,7 +10,7 @@ import (
 
 func Test(t *testing.T) {
 	for _, fen := range chesstest.Suites {
-		board, err := chess.NewPositionFromFEN(fen)
+		board, err := chess.NewGameFromFEN(fen)
 
 		if err != nil {
 			t.Fatalf("invalid FEN %s: %v", fen, err)

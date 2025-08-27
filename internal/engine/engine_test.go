@@ -1,12 +1,12 @@
-package chess_test
+package engine_test
 
 import (
 	"iter"
 	"maps"
 	"testing"
 
-	"github.com/rswilli/chess/internal/chess"
 	"github.com/rswilli/chess/internal/chesstest"
+	"github.com/rswilli/chess/internal/engine"
 	"github.com/rswilli/chess/internal/uci"
 )
 
@@ -19,7 +19,7 @@ func TestPerft(t *testing.T) {
 
 	depth := 5
 
-	local := uci.NewProxy(chess.NewEngine())
+	local := uci.NewProxy(engine.NewEngine())
 
 	chesstest.RunAll(t, func(t *testing.T, fen string) {
 		comparePerft(t, stockfish, local, fen, depth, nil)
