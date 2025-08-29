@@ -7,13 +7,13 @@ import (
 	"net/http"
 
 	"github.com/rswilli/chess/internal/chess"
-	"github.com/rswilli/chess/internal/game"
+	"github.com/rswilli/chess/internal/gui"
 	"github.com/rswilli/chess/internal/www"
 	"golang.org/x/net/websocket"
 )
 
 func main() {
-	game := game.New()
+	game := gui.New()
 
 	mux := http.NewServeMux()
 
