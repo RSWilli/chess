@@ -42,14 +42,18 @@ func (b BitBoard) Each(f func(b BitBoard)) {
 
 func (b BitBoard) Ones() iter.Seq[BitBoard] {
 	return func(yield func(BitBoard) bool) {
-		for i := range BitBoard(64) {
-			if b&(1<<i) == 0 {
-				continue
-			}
+		tmp := b
+		for tmp != 0 {
+			// find the least significant bit
+			lsb := tmp & -tmp
 
-			if !yield(1 << i) {
+			// remove the lsb from tmp for next iteration
+			tmp &^= tmp & -tmp
+
+			if !yield(lsb) {
 				break
 			}
+
 		}
 	}
 }
