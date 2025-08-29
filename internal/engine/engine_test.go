@@ -10,6 +10,14 @@ import (
 	"github.com/rswilli/chess/internal/uci"
 )
 
+func BenchmarkPerft(t *testing.B) {
+	local := uci.NewProxy(engine.NewEngine())
+
+	for t.Loop() {
+		local.Perft(5)
+	}
+}
+
 func TestPerft(t *testing.T) {
 	stockfish, err := uci.NewStockfish()
 
