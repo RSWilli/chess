@@ -21,6 +21,7 @@
       pkgs.mkShell {
         packages = with pkgs; [
           local_go
+          graphviz # for pprof
           stockfish
           rlwrap # for terminal command history inside stockfish
         ];
