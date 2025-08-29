@@ -152,11 +152,13 @@ var (
 	whiteCastleKing            = BitBoard(MustParseSquare("f1") | MustParseSquare("g1"))
 	whiteCastleKingKingTarget  = MustParseSquare("g1")
 	whiteCastleKingRookTarget  = MustParseSquare("f1")
-	whiteCastleQueen           = BitBoard(MustParseSquare("c1") | MustParseSquare("d1"))
+	whiteCastleQueenNoCheck    = BitBoard(MustParseSquare("c1") | MustParseSquare("d1"))
+	whiteCastleQueenEmpty      = BitBoard(MustParseSquare("b1") | MustParseSquare("c1") | MustParseSquare("d1"))
 	whiteCastleQueenKingTarget = MustParseSquare("c1")
 	whiteCastleQueenRookTarget = MustParseSquare("d1")
 
-	blackCastleQueen           = BitBoard(MustParseSquare("c8") | MustParseSquare("d8"))
+	blackCastleQueenNoCheck    = BitBoard(MustParseSquare("c8") | MustParseSquare("d8"))
+	blackCastleQueenEmpty      = BitBoard(MustParseSquare("b8") | MustParseSquare("c8") | MustParseSquare("d8"))
 	blackCastleKingKingTarget  = MustParseSquare("g8")
 	blackCastleKingRookTarget  = MustParseSquare("f8")
 	blackCastleKing            = BitBoard(MustParseSquare("f8") | MustParseSquare("g8"))
@@ -179,14 +181,14 @@ func (p *Game) canCastleWhiteKing() bool {
 }
 
 func (p *Game) canCastleWhiteQueen() bool {
-	return p.whiteKing == BitBoard(e1) && p.castling.Has(CastleWhiteQueen) && p.all()&whiteCastleQueen == 0 && p.notAttacked(whiteCastleQueen)
+	return p.whiteKing == BitBoard(e1) && p.castling.Has(CastleWhiteQueen) && p.all()&whiteCastleQueenEmpty == 0 && p.notAttacked(whiteCastleQueenNoCheck)
 }
 func (p *Game) canCastleBlackKing() bool {
 	return p.blackKing == BitBoard(e8) && p.castling.Has(CastleBlackKing) && p.all()&blackCastleKing == 0 && p.notAttacked(blackCastleKing)
 }
 
 func (p *Game) canCastleBlackQueen() bool {
-	return p.blackKing == BitBoard(e8) && p.castling.Has(CastleBlackQueen) && p.all()&blackCastleQueen == 0 && p.notAttacked(blackCastleQueen)
+	return p.blackKing == BitBoard(e8) && p.castling.Has(CastleBlackQueen) && p.all()&blackCastleQueenEmpty == 0 && p.notAttacked(blackCastleQueenNoCheck)
 }
 
 func (p *Game) generateKingMoves(bb BitBoard, legalMoves *[]Move) {
