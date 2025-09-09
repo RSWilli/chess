@@ -1,3 +1,5 @@
+# Pinned EnPassant:
+8/8/8/KpP3r1/8/8/8/6k1 w - b6 0 1
 # own king in check, taking attacker and blocking possible:
 1k6/8/8/1BR2q2/8/8/1PKP1N2/8 w - - 0 1
 # Default position:

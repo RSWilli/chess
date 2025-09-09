@@ -26,7 +26,7 @@ type Game struct {
 
 	// xRayKingAttacks contains all lines of attacks that could create a check when a piece moves.
 	// this is needed to detect pinned pieces
-	xRayKingAttacks []attackRay
+	xRayKingAttacks [8]attackRay
 }
 
 func NewGame() *Game {
@@ -177,7 +177,7 @@ func (p *Game) DoMove(m Move) {
 func (p *Game) reset() {
 	p.attacksFrom = squareLookup[BitBoard]{}
 	p.attacksTo = squareLookup[BitBoard]{}
-	p.xRayKingAttacks = nil
+	p.xRayKingAttacks = [8]attackRay{}
 }
 
 func (p *Game) computeAll() {
@@ -197,7 +197,7 @@ func (p *Game) computeAll() {
 			White,
 		)
 
-		p.xRayKingAttacks = calculateXRayAttacks(
+		p.calculateSlidingKingAttacks(
 			p.blackKing,
 			p.whiteQueens,
 			p.whiteRooks,
@@ -217,7 +217,7 @@ func (p *Game) computeAll() {
 			Black,
 		)
 
-		p.xRayKingAttacks = calculateXRayAttacks(
+		p.calculateSlidingKingAttacks(
 			p.whiteKing,
 			p.blackQueens,
 			p.blackRooks,

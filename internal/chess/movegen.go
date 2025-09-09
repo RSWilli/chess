@@ -403,10 +403,19 @@ func (p *Game) isLegalMove(m Move) bool {
 	// move the piece, needed for pin detection:
 	moved := (p.all() | BitBoard(m.To)) &^ BitBoard(m.From)
 
+	if m.Special.Has(EnPassant) {
+		// also remove the taken piece
+		if p.PlayerInTurn == White {
+			moved &^= BitBoard(p.enPassantTarget).Down()
+		} else {
+			moved &^= BitBoard(p.enPassantTarget).Up()
+		}
+	}
+
 	var blockedSlidingAttackers BitBoard
 
 	for _, attack := range p.xRayKingAttacks {
-		if BitBoard(m.To) != attack.from && moved&attack.ray == 0 {
+		if attack.from != 0 && BitBoard(m.To) != attack.from && moved&attack.ray == 0 {
 			// no piece is blocking the sliding piece attack or taking it, piece could have moved
 			// out of a pin, or did not block the check -> not legal
 			return false

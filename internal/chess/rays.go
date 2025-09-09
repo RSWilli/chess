@@ -1,44 +1,51 @@
 package chess
 
-// ray is a name for a [BitBoard] that connects from and to, but without containing to from and to
-type ray struct {
-	from BitBoard
-	to   BitBoard
-}
-
 type attackRay struct {
 	from BitBoard
 	ray  BitBoard
 }
 
-// initialize rays to hold the correct amount
-var rays = make(map[ray]BitBoard, 1036)
+// ray datastructures containing the respective ray until the end of the board for each square
+var (
+	northRays     = squareLookup[BitBoard]{}
+	northEastRays = squareLookup[BitBoard]{}
+	eastRays      = squareLookup[BitBoard]{}
+	southEastRays = squareLookup[BitBoard]{}
+	southRays     = squareLookup[BitBoard]{}
+	northWestRays = squareLookup[BitBoard]{}
+	westRays      = squareLookup[BitBoard]{}
+	southWestRays = squareLookup[BitBoard]{}
+)
 
 func init() {
+	type d struct {
+		f     func(BitBoard) BitBoard
+		store *squareLookup[BitBoard]
+	}
+
+	ds := []d{
+		{BitBoard.Up, &northRays},
+		{BitBoard.DiagUp, &northEastRays},
+		{BitBoard.Right, &eastRays},
+		{BitBoard.DiagDown, &southEastRays},
+		{BitBoard.Down, &southRays},
+		{BitBoard.AntiDiagDown, &northWestRays},
+		{BitBoard.Left, &westRays},
+		{BitBoard.AntiDiagUp, &southWestRays},
+	}
+
 	// generate rays in all queen move directions for each square
-	for i := range 64 {
-		from := BitBoard(1 << i)
+	for _, d := range ds {
+		for i := range 64 {
+			sq := BitBoard(1 << i)
 
-		stepFuncs := []func(BitBoard) BitBoard{
-			BitBoard.Right,
-			BitBoard.Left,
-			BitBoard.Up,
-			BitBoard.Down,
+			ray := BitBoard(sq)
 
-			BitBoard.DiagUp,
-			BitBoard.DiagDown,
-			BitBoard.AntiDiagUp,
-			BitBoard.AntiDiagDown,
-		}
-
-		for _, step := range stepFuncs {
-			r := BitBoard(0)
-			for to := step(from); to != 0; to = step(to) {
-				if r != 0 {
-					rays[ray{from, to}] = r
-				}
-				r |= to
+			for sq := sq; sq != 0; sq = d.f(sq) {
+				ray |= sq
 			}
+
+			d.store.set(sq, ray)
 		}
 	}
 }

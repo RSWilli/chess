@@ -33,48 +33,63 @@ func calculateAttackMaps(all, king, queens, rooks, bishops, knights, pawns BitBo
 	return transpose(attacksFrom), attacksTo
 }
 
-// calculateXRayAttacks returns a list of Bitboards that contain 1s everywhere that a piece must stand
+// calculateSlidingKingAttacks returns a list of Bitboards that contain 1s everywhere that a piece must stand
 // to prevent a check from a sliding piece. This is needed to detect pinned pieces as well as force blocking
 // a check.
-func calculateXRayAttacks(king, opponentQueens, opponentRooks, opponentBishops BitBoard) []attackRay {
-	var attackRays []attackRay
+func (p *Game) calculateSlidingKingAttacks(king, opponentQueens, opponentRooks, opponentBishops BitBoard) {
+	currentRay := 0
 
-	for queen := range opponentQueens.Ones() {
-		if r, ok := rays[ray{from: king, to: queen}]; ok {
-			attackRays = append(attackRays, attackRay{
-				from: queen,
-				ray:  r,
-			})
+	// we simulate the king as a queen, and check the rays individually for the correct pieces
+	// for that we don't use any of our pieces and join all sliders. If we hit a slider and the slider can move in
+	// that direction, then the ray is an (maybe xray) sliding attack ray
+	ours := BitBoard(0)
+	theirSliders := opponentQueens | opponentRooks | opponentBishops
+
+	allRays := queenMoves(king, ours, theirSliders)
+
+	orthogonalKingRays := [4]BitBoard{
+		northRays.get(king) & allRays,
+		eastRays.get(king) & allRays,
+		southRays.get(king) & allRays,
+		westRays.get(king) & allRays,
+	}
+
+	diagonalKingRays := [4]BitBoard{
+		northEastRays.get(king) & allRays,
+		southEastRays.get(king) & allRays,
+		northWestRays.get(king) & allRays,
+		southWestRays.get(king) & allRays,
+	}
+
+	checkRay := func(piece, ray BitBoard) {
+		if piece&ray == 0 {
+			return
+		}
+
+		// the ray can be inversed and treated as if coming from this piece
+
+		pinRay := ray &^ piece
+
+		p.xRayKingAttacks[currentRay] = attackRay{
+			from: piece,
+			ray:  pinRay,
+		}
+
+		currentRay++
+	}
+
+	opponentOrthoSliders := opponentRooks | opponentQueens
+	opponentDiagSliders := opponentBishops | opponentQueens
+
+	for rook := range opponentOrthoSliders.Ones() {
+		for _, ray := range orthogonalKingRays {
+			checkRay(rook, ray)
 		}
 	}
 
-	for rook := range opponentRooks.Ones() {
-		if !rook.isSameFile(king) && !rook.isSameRank(king) {
-			// a ray would be a bishop ray
-			continue
-		}
-
-		if r, ok := rays[ray{from: king, to: rook}]; ok {
-			attackRays = append(attackRays, attackRay{
-				from: rook,
-				ray:  r,
-			})
+	for bishop := range opponentDiagSliders.Ones() {
+		for _, ray := range diagonalKingRays {
+			checkRay(bishop, ray)
 		}
 	}
-
-	for bishop := range opponentBishops.Ones() {
-		if bishop.isSameFile(king) || bishop.isSameRank(king) {
-			// a ray would be a rook ray
-			continue
-		}
-
-		if r, ok := rays[ray{from: king, to: bishop}]; ok {
-			attackRays = append(attackRays, attackRay{
-				from: bishop,
-				ray:  r,
-			})
-		}
-	}
-
-	return attackRays
 }
