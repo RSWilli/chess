@@ -74,24 +74,19 @@ func (b BitBoard) Count() int {
 	return bits.OnesCount64(uint64(b))
 }
 
+const (
+	aFile BitBoard = 0x0101010101010101
+	hFile          = aFile << 7
+)
+
 func (b BitBoard) Left() BitBoard {
-	s := b >> 1
-
-	if s == 0 || !b.isSameRank(s) {
-		return 0
-	}
-
-	return s
+	// prevent wrap around to h file, going left can never reach it
+	return (b >> 1) &^ hFile
 }
 
 func (b BitBoard) Right() BitBoard {
-	s := b << 1
-
-	if !b.isSameRank(s) {
-		return 0
-	}
-
-	return s
+	// prevent wrap around to a file, going right can never reach it
+	return (b << 1) &^ aFile
 }
 
 func (b BitBoard) Up() BitBoard {
@@ -116,46 +111,4 @@ func (b BitBoard) AntiDiagUp() BitBoard {
 
 func (b BitBoard) AntiDiagDown() BitBoard {
 	return b.Down().Left()
-}
-
-// isSameRank checks whether the two bitboard squares are on the same rank
-//
-// this is useful to check whether we accidentally wrapped around from a<->h file
-func (b BitBoard) isSameRank(other BitBoard) bool {
-	if b == 0 || other == 0 {
-		return false // one or both is outside of the board
-	}
-
-	rank := BitBoard(0xFF)
-
-	for range 8 {
-		if (rank&b != 0) != (rank&other != 0) {
-			return false
-		}
-
-		rank <<= 8
-	}
-
-	return true
-}
-
-// isSameFile checks whether the two bitboard squares are on the same file
-//
-// this is useful to check whether we accidentally wrapped around from a<->h file
-func (b BitBoard) isSameFile(other BitBoard) bool {
-	if b == 0 || other == 0 {
-		return false // one or both is outside of the board
-	}
-
-	rank := BitBoard(0x0101010101010101)
-
-	for range 8 {
-		if (rank&b != 0) != (rank&other != 0) {
-			return false
-		}
-
-		rank <<= 1
-	}
-
-	return true
 }
