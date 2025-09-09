@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,7 +14,7 @@ import (
 )
 
 func main() {
-	game := gui.New()
+	gui := gui.New()
 
 	mux := http.NewServeMux()
 
@@ -23,8 +24,8 @@ func main() {
 		},
 		Handler: websocket.Handler(func(ws *websocket.Conn) {
 			slog.Info("subscribing to events")
-			events := game.Subscribe()
-			defer game.Unsubscribe(events)
+			events := gui.Subscribe()
+			defer gui.Unsubscribe(events)
 
 			done := make(chan struct{})
 
@@ -34,15 +35,24 @@ func main() {
 				done <- struct{}{}
 			}()
 
-			for {
-				boardData, err := game.Render()
+			// buf to write to the websocket in a single write operation
+			var buf bytes.Buffer
 
-				if err == nil {
-					// needs to happen as a single call to write otherwise we create multiple
-					// messages
-					ws.Write(boardData)
-				} else {
+			for {
+				buf.Reset()
+
+				err := gui.Render(&buf)
+
+				if err != nil {
 					slog.Error("error rendering board", "error", err)
+					return
+				}
+
+				n, err := ws.Write(buf.Bytes())
+
+				if err != nil || n < len(buf.Bytes()) {
+					slog.Error("write error of short write", "error", err)
+					return
 				}
 
 				select {
@@ -84,7 +94,7 @@ func main() {
 			http.Error(w, fmt.Sprintf("Invalid promotion given: %s", r.PathValue("promotion")), http.StatusBadRequest)
 		}
 
-		game.DoSquare(square, special)
+		gui.DoSquare(square, special)
 	})
 
 	mux.Handle("GET /websocket", ws)

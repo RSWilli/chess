@@ -23,7 +23,7 @@ function connectWebSocket() {
 
         promotionDialog.close()
 
-        attachClickHandlers()
+        attachSquareClickHandlers()
     })
 
     w.addEventListener('close', (event) => {
@@ -42,7 +42,7 @@ function connectWebSocket() {
 
 connectWebSocket()
 
-function attachClickHandlers() {
+function attachSquareClickHandlers() {
     const tiles = document.querySelectorAll("#board .tile")
 
     console.log(tiles)

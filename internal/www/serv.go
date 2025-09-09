@@ -1,9 +1,9 @@
 package www
 
 import (
-	"bytes"
 	"embed"
 	"html/template"
+	"io"
 	"net/http"
 	"slices"
 	"strings"
@@ -19,15 +19,8 @@ var StaticServer = http.FileServerFS(static)
 var boardTpl string
 var boardTemplate = template.Must(template.New("main").Funcs(funcMap).Parse(boardTpl))
 
-func RenderBoard(data Data) ([]byte, error) {
-	buf := bytes.Buffer{}
-	err := boardTemplate.Execute(&buf, data)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+func RenderBoard(w io.Writer, data Data) error {
+	return boardTemplate.Execute(w, data)
 }
 
 type Data struct {

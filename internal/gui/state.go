@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"io"
 	"slices"
 
 	"github.com/rswilli/chess/internal/chess"
@@ -20,7 +21,7 @@ type State struct {
 	currentSquare chess.Square
 }
 
-func (s *State) Render() ([]byte, error) {
+func (s *State) Render(w io.Writer) error {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -36,7 +37,7 @@ func (s *State) Render() ([]byte, error) {
 		moves = append(moves, m.To)
 	}
 
-	return www.RenderBoard(www.Data{
+	return www.RenderBoard(w, www.Data{
 		Board:    s.currentBoard,
 		Selected: s.currentSquare,
 
