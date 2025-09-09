@@ -400,17 +400,18 @@ func (p *Game) isLegalMove(m Move) bool {
 		ourKing = p.blackKing
 	}
 
-	// move the piece, needed for pin detection:
-	moved := (p.all() | BitBoard(m.To)) &^ BitBoard(m.From)
-
+	// enpassantTaken is the taken pawn while doing en passant
+	var enpassantTaken BitBoard
 	if m.Special.Has(EnPassant) {
-		// also remove the taken piece
 		if p.PlayerInTurn == White {
-			moved &^= BitBoard(p.enPassantTarget).Down()
+			enpassantTaken = BitBoard(p.enPassantTarget).Down()
 		} else {
-			moved &^= BitBoard(p.enPassantTarget).Up()
+			enpassantTaken = BitBoard(p.enPassantTarget).Up()
 		}
 	}
+
+	// move the piece, needed for pin detection:
+	moved := (p.all() | BitBoard(m.To)) &^ (BitBoard(m.From) | enpassantTaken)
 
 	var blockedSlidingAttackers BitBoard
 
@@ -431,6 +432,7 @@ func (p *Game) isLegalMove(m Move) bool {
 		return true
 	}
 
-	// move is only legal if we capture the attacker
-	return m.Special.Has(Captures) && (kingAttacks&^BitBoard(m.To)) == 0
+	// move is only legal if we capture the attacker, either directly or via en passant
+	return m.Special.Has(Captures) && (kingAttacks&^(BitBoard(m.To))) == 0 ||
+		m.Special.Has(EnPassant) && (kingAttacks&^enpassantTaken) == 0
 }
