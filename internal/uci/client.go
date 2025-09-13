@@ -178,7 +178,7 @@ func (c *Client) Perft(depth int) (PerftResult, error) {
 	return PerftResult{Total: total, Moves: moves}, nil
 }
 
-func (c *Client) Go(opts GoOptions) (GoResponse, error) {
+func (c *Client) Go(opts GoOptions) (Bestmove, error) {
 	var parts []string
 
 	parts = append(parts, "go")
@@ -224,14 +224,14 @@ func (c *Client) Go(opts GoOptions) (GoResponse, error) {
 	err := c.writeCommand(strings.Join(parts, " "))
 
 	if err != nil {
-		return GoResponse{}, err
+		return Bestmove{}, err
 	}
 
 	for {
 		line, err := c.read()
 
 		if err != nil {
-			return GoResponse{}, err
+			return Bestmove{}, err
 		}
 
 		if strings.HasPrefix(line, "info") {
@@ -239,16 +239,16 @@ func (c *Client) Go(opts GoOptions) (GoResponse, error) {
 		}
 
 		if !strings.HasPrefix(line, "bestmove") {
-			return GoResponse{}, fmt.Errorf("unexpected response while go-ing: %s", line)
+			return Bestmove{}, fmt.Errorf("unexpected response while go-ing: %s", line)
 		}
 
 		parts := strings.Split(line, " ")
 
 		if len(parts) != 4 || parts[2] != "ponder" {
-			return GoResponse{}, fmt.Errorf("bestmove response with unexpected format: %s", line)
+			return Bestmove{}, fmt.Errorf("bestmove response with unexpected format: %s", line)
 		}
 
-		return GoResponse{
+		return Bestmove{
 			BestMove: parts[1],
 			Ponder:   parts[3],
 		}, nil

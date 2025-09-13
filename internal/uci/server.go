@@ -8,21 +8,6 @@ import (
 	"time"
 )
 
-type GoOptions struct {
-	SearchMoves    []string
-	Ponder         bool
-	WhiteTime      time.Duration
-	BlackTime      time.Duration
-	WhiteIncrement time.Duration
-	BlackIncrement time.Duration
-	MovesToGo      int
-	Depth          int
-	Nodes          int
-	Mate           int
-	MoveTime       time.Duration
-	Infinite       bool
-}
-
 // Engine is the actual engine that responds to the UCI commands.
 // Any returned error will make [Server.Run] return and thus stop the server
 type Engine interface {
@@ -31,7 +16,8 @@ type Engine interface {
 	Perft(depth int) (PerftResult, error)
 	Ready() error
 
-	Go(options GoOptions) (GoResponse, error)
+	Go(options GoOptions) (<-chan Bestmove, <-chan Info)
+	Stop()
 }
 
 type Server struct {
@@ -54,6 +40,7 @@ func (s *Server) respond(cmd string) error {
 
 	return err
 }
+
 func (s *Server) Run() error {
 	scan := bufio.NewScanner(s.r)
 
@@ -78,6 +65,10 @@ func (s *Server) handleCommand(line string) error {
 	}
 	if line == "quit" {
 		return fmt.Errorf("server closed by user")
+	}
+	if line == "stop" {
+		s.h.Stop()
+		return nil
 	}
 	if line == "isready" {
 		err := s.h.Ready()
@@ -287,7 +278,7 @@ func (s *Server) handleGoCommand(line string) error {
 				return err
 			}
 
-			opts.BlackIncrement = time.Duration(ms) * time.Millisecond
+			opts.MoveTime = time.Duration(ms) * time.Millisecond
 
 			parts = parts[2:]
 			continue
@@ -296,17 +287,21 @@ func (s *Server) handleGoCommand(line string) error {
 		return fmt.Errorf("unknown go command argument: %s", line)
 	}
 
-	if opts.Infinite {
-		return fmt.Errorf("infinite is not supported")
-	}
+	go func() {
+		bestmove, infos := s.h.Go(opts)
 
-	res, err := s.h.Go(opts)
+		go func() {
+			for i := range infos {
+				s.respond(i.String())
+			}
+		}()
 
-	if err != nil {
-		return err
-	}
+		go func() {
+			bm := <-bestmove
 
-	_, err = fmt.Fprintf(s.w, "bestmove %s ponder %s", res.BestMove, res.Ponder)
+			s.respond(bm.String())
+		}()
+	}()
 
-	return err
+	return nil
 }

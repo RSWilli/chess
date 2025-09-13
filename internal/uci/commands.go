@@ -38,6 +38,10 @@ func (i *Info) MarshalText() (text []byte, err error) {
 	return fmt.Appendf(nil, "info %s %s", i.Key, i.Value), nil
 }
 
+func (i *Info) String() string {
+	return fmt.Sprintf("info %s %s", i.Key, i.Value)
+}
+
 var _ encoding.TextUnmarshaler = &Info{}
 var _ encoding.TextMarshaler = &Info{}
 
@@ -62,7 +66,11 @@ func (p *PerftResult) String() string {
 	return string(text)
 }
 
-type GoResponse struct {
+type Bestmove struct {
 	BestMove string
 	Ponder   string
+}
+
+func (bm *Bestmove) String() string {
+	return fmt.Sprintf("bestmove %s ponder %s", bm.BestMove, bm.Ponder)
 }
