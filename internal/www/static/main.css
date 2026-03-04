@@ -59,7 +59,10 @@ main {
 
 .highlighted {
     box-shadow: 0 0 20px inset #0b5700;
-    box-shadow: 0 0 20px inset #0b5700;
+}
+
+.check {
+    box-shadow: 0 0 20px inset #db3700;
 }
 
 .target {

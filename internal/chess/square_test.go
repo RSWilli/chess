@@ -1,7 +1,6 @@
 package chess_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/rswilli/chess/internal/chess"
@@ -20,8 +19,8 @@ func TestParseTile(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		fmt.Println(tile.Debug())
-		fmt.Println(tile)
+		t.Log(tile.Debug())
+		t.Log(tile)
 
 		if tile.String() != square {
 			t.Fatalf("expected %s, got %s", square, tile.String())

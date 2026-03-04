@@ -16,11 +16,10 @@
       pkgs = import nixpkgs {
         inherit system;
       };
-      local_go = pkgs.go_1_25;
     in
       pkgs.mkShell {
         packages = with pkgs; [
-          local_go
+          go_latest
           graphviz # for pprof
           stockfish
           rlwrap # for terminal command history inside stockfish
@@ -28,12 +27,15 @@
 
         GO111MODULE = "on";
 
+        # go 1.25 new json implementation
+        GOEXPERIMENT = "jsonv2";
+
         # needed for running delve with cgo
         # https://wiki.nixos.org/wiki/Go#Using_cgo_on_NixOS
         hardeningDisable = ["fortify"];
 
         shellHook = ''
-          ${local_go}/bin/go version
+          ${pkgs.go_latest}/bin/go version
         '';
       };
   };

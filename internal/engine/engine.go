@@ -10,7 +10,7 @@ import (
 )
 
 type Engine struct {
-	pos *chess.Game
+	pos *chess.Position
 
 	lock sync.Mutex
 	// searching is used to check if the engine is searching but also to know when to abort the search in
@@ -21,13 +21,13 @@ type Engine struct {
 
 func NewEngine() *Engine {
 	return &Engine{
-		pos: chess.NewGame(),
+		pos: chess.NewPosition(),
 	}
 }
 
 // NewGame implements uci.Engine.
 func (e *Engine) NewGame() error {
-	e.pos = chess.NewGame()
+	e.pos = chess.NewPosition()
 
 	// clear all caches here
 
@@ -88,7 +88,7 @@ func (e *Engine) internalPerft(depth int) int {
 }
 
 // Position implements uci.Engine.
-func (e *Engine) Position(fen string, moves []string) error {
+func (e *Engine) Position(pos *chess.Position) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 
@@ -96,28 +96,7 @@ func (e *Engine) Position(fen string, moves []string) error {
 		return fmt.Errorf("search running cannot change position")
 	}
 
-	if fen == uci.StartPosition {
-		e.pos = chess.NewGame()
-		return nil
-	} else {
-		pos, err := chess.NewGameFromFEN(fen)
-
-		if err != nil {
-			return fmt.Errorf("could not parse FEN: %v", err)
-		}
-
-		e.pos = pos
-	}
-
-	for _, m := range moves {
-		move, err := e.pos.ParseMove(m)
-
-		if err != nil {
-			return fmt.Errorf("could not parse move: %v", err)
-		}
-
-		e.pos.DoMove(move)
-	}
+	e.pos = pos
 
 	return nil
 }
@@ -148,12 +127,21 @@ func (e *Engine) search(ret chan uci.Bestmove, info chan uci.Info) {
 	moves := e.pos.GenerateMoves()
 	close(info) // Do we actually need to log info?
 
+	if len(moves) == 0 {
+		e.searching = false
+
+		close(ret)
+		return
+	}
+
 	i := rand.IntN(len(moves))
 
 	ret <- uci.Bestmove{
 		BestMove: moves[i].String(),
 		Ponder:   "a1a2", // tmp
 	}
+
+	e.searching = false
 }
 
 // Stop implements uci.Engine.

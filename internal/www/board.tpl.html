@@ -8,7 +8,12 @@
     {{ range $i, $rank := ranks }}
     <span>{{ $rank }}</span>
     {{ range $j, $file := files }}
-    <div class="tile {{ $.ClassesFor $j $i }}" data-square="{{ $file }}{{ $rank }}">
+    {{- $move := $.MoveTo $j $i }}
+    <div class="tile {{ $.ClassesFor $j $i }}" data-square="{{ $file }}{{ $rank }}"
+    {{ if $move }}
+    data-move="{{ $move }}"
+    {{ end }}
+    >
         {{ $pieceAt := $.PieceAt $j $i }}
         {{ if $pieceAt}}
         <img class="piece" src="{{ $pieceAt }}" draggable="false">

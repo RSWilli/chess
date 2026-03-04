@@ -8,10 +8,6 @@ import (
 
 type Piece uint8
 
-func (p Piece) Is(other Piece) bool {
-	return p&other != 0
-}
-
 func (p Piece) Rune() rune {
 	switch p {
 	case Empty:

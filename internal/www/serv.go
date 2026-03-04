@@ -5,28 +5,31 @@ import (
 	"html/template"
 	"io"
 	"net/http"
-	"slices"
 	"strings"
 
 	"github.com/rswilli/chess/internal/chess"
 )
 
-//go:embed index.html static/*
+//go:embed static/*
 var static embed.FS
 var StaticServer = http.FileServerFS(static)
 
-//go:embed board.tpl.html
-var boardTpl string
-var boardTemplate = template.Must(template.New("main").Funcs(funcMap).Parse(boardTpl))
+//go:embed *.tpl.html
+var rawtemplates embed.FS
+var templates = template.Must(template.New("main").Funcs(funcMap).ParseFS(rawtemplates, "*"))
+
+func RenderIndex(w io.Writer, data Data) error {
+	return templates.ExecuteTemplate(w, "index.tpl.html", data)
+}
 
 func RenderBoard(w io.Writer, data Data) error {
-	return boardTemplate.Execute(w, data)
+	return templates.ExecuteTemplate(w, "board.tpl.html", data)
 }
 
 type Data struct {
-	Board       *chess.Game
+	Board       *chess.Position
 	Selected    chess.Square
-	MoveTargets []chess.Square
+	MoveTargets map[chess.Square][]chess.Move
 	Promotion   bool
 }
 
@@ -40,11 +43,13 @@ func (d Data) ClassesFor(fileIndex, rankIndex int) string {
 		classes = append(classes, "white")
 	}
 
-	if d.Selected == chess.NewSquare(rankIndex, fileIndex) {
+	square := chess.NewSquare(rankIndex, fileIndex)
+
+	if d.Selected == square {
 		classes = append(classes, "highlighted")
 	}
 
-	if slices.Contains(d.MoveTargets, chess.NewSquare(rankIndex, fileIndex)) {
+	if _, ok := d.MoveTargets[square]; ok {
 		classes = append(classes, "target")
 
 		if d.Promotion {
@@ -52,7 +57,29 @@ func (d Data) ClassesFor(fileIndex, rankIndex int) string {
 		}
 	}
 
+	if p := d.Board.Square(square); (p == (chess.King & d.Board.PlayerInTurn)) && d.Board.IsCheck() {
+		classes = append(classes, "check")
+	}
+
 	return strings.Join(classes, " ")
+}
+
+func (d Data) MoveTo(fileIndex, rankIndex int) string {
+	sq := chess.NewSquare(rankIndex, fileIndex)
+
+	moves, ok := d.MoveTargets[sq]
+
+	if !ok {
+		return ""
+	}
+
+	var ms []string
+
+	for _, m := range moves {
+		ms = append(ms, m.String())
+	}
+
+	return strings.Join(ms, ",")
 }
 
 // PieceAt returns the URL of the image that is needed for the piece at file/rank or an empty string

@@ -6,16 +6,16 @@ import (
 	"github.com/rswilli/chess/internal/zobrist"
 )
 
-// Game represents a state of a chess game. This can be used by engines to traverse the game tree.
-type Game struct {
+// Position represents a state of a chess game. This can be used by engines to traverse the game tree.
+type Position struct {
 	_ [0]func() // equal guard
 
-	position
+	board
 
 	Moves int
 
 	// history contains the previous positions in a stack, useful for [Position.UndoMove]
-	history []position
+	history []board
 
 	// Calculated properties, will be reset after a move is done:
 
@@ -29,19 +29,19 @@ type Game struct {
 	xRayKingAttacks [8]attackRay
 }
 
-func NewGame() *Game {
-	b, err := NewGameFromFEN(DefaultFen)
+func NewPosition() *Position {
+	p, err := NewPositionFromFEN(DefaultFen)
 	// b, err := NewGameFromFEN("r3kbnr/1b3ppp/pqn5/1pp1P3/3p4/1BN2N2/PP2QPPP/R1BR2K1 w kq - 0 1")
 
 	if err != nil {
 		panic(err)
 	}
 
-	return b
+	return p
 }
 
-func (p *Game) DoMove(m Move) {
-	p.history = append(p.history, p.position)
+func (p *Position) DoMove(m Move) {
+	p.history = append(p.history, p.board)
 
 	pawnMove := false
 
@@ -160,7 +160,10 @@ func (p *Game) DoMove(m Move) {
 		p.HalfmoveClock = 0
 	}
 
-	p.Moves++
+	if p.PlayerInTurn == Black {
+		// Fullmove counter only increments after black played
+		p.Moves++
+	}
 
 	// Move done, reset state and recalculate:
 	if p.PlayerInTurn == White {
@@ -171,16 +174,17 @@ func (p *Game) DoMove(m Move) {
 
 	p.HashKey = p.HashKey.Update(zobrist.SwitchSide)
 
-	p.reset()
+	// TODO: do this more cleverly, e.g. incrementally update
+	p.computeAll()
 }
 
-func (p *Game) reset() {
+func (p *Position) reset() {
 	p.attacksFrom = squareLookup[BitBoard]{}
 	p.attacksTo = squareLookup[BitBoard]{}
 	p.xRayKingAttacks = [8]attackRay{}
 }
 
-func (p *Game) computeAll() {
+func (p *Position) computeAll() {
 	p.reset()
 
 	if p.PlayerInTurn == Black {
@@ -226,7 +230,7 @@ func (p *Game) computeAll() {
 	}
 }
 
-func (p *Game) UndoMove() {
+func (p *Position) UndoMove() {
 	if p.Moves == 0 || len(p.history) == 0 {
 		// this is a programming error, so we panic here
 		panic("cannot undo move, none was done")
@@ -235,9 +239,10 @@ func (p *Game) UndoMove() {
 	lastPos := p.history[len(p.history)-1]
 	p.history = p.history[:len(p.history)-1]
 
-	p.position = lastPos
+	p.board = lastPos
 
-	p.reset()
+	// TODO: do this more cleverly, e.g. incrementally update
+	p.computeAll()
 }
 
 // maxMovesSinglePiece is the number of max possible moves of a single piece (queen at e4, 27 Moves) with added padding
@@ -246,7 +251,7 @@ const maxMovesSinglePiece = 30
 
 // ParseMove parses the move in algebraic notation (see [ParseMove]) and takes into account the current
 // position to account for special moves
-func (p *Game) ParseMove(in string) (Move, error) {
+func (p *Position) ParseMove(in string) (Move, error) {
 	m, err := ParseMove(in)
 
 	if err != nil {
@@ -272,20 +277,20 @@ func (p *Game) ParseMove(in string) (Move, error) {
 	p.generateMovesForPiece(piece, BitBoard(m.From), &legalMoves)
 
 	for _, legalMove := range legalMoves {
-		if legalMove.From == m.From && legalMove.To == m.To {
+		if legalMove.From == m.From && legalMove.To == m.To && (m.Special == NoSpecial || legalMove.Special.Has(m.Special)) {
 			return legalMove, nil
 		}
 	}
 
-	return Move{}, fmt.Errorf("given move is not a legal move")
+	return Move{}, fmt.Errorf("given move is not a legal move: %s", in)
 }
 
-func (p *Game) Equals(other *Game) bool {
-	return p.position == other.position
+func (p *Position) Equals(other *Position) bool {
+	return p.board == other.board
 }
 
 // IsCheck is meant to be called by the visualization and returns true if the current player is in check
-func (p *Game) IsCheck() bool {
+func (p *Position) IsCheck() bool {
 	if p.PlayerInTurn == White {
 		return p.attacksTo.get(p.whiteKing) != 0
 	} else {
@@ -294,19 +299,19 @@ func (p *Game) IsCheck() bool {
 }
 
 // IsCheckMate is meant to be called by the visualization and returns true if the current player is in checkmate
-func (p *Game) IsCheckMate() bool {
+func (p *Position) IsCheckMate() bool {
 	return p.IsCheck() && len(p.GenerateMoves()) == 0
 }
 
 // IsDraw is meant to be called by the visualization and returns true if the game is drewn
-func (p *Game) IsDraw() bool {
+func (p *Position) IsDraw() bool {
 	return !p.IsCheck() && len(p.GenerateMoves()) == 0
 }
 
-func (p *Game) Copy() *Game {
+func (p *Position) Copy() *Position {
 	c := *p
 
-	historyCopy := make([]position, len(c.history))
+	historyCopy := make([]board, len(c.history))
 	copy(historyCopy, c.history)
 
 	c.reset()

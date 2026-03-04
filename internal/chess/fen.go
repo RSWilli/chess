@@ -61,15 +61,15 @@ var fenCastlingAbilityTranslation = map[rune]CastlingAbility{
 
 var ErrMalformedFEN = errors.New("given FEN is malformed")
 
-// NewGameFromFEN parses the given FEN string as defined in https://www.chessprogramming.org/Forsyth-Edwards_Notation
-func NewGameFromFEN(in string) (*Game, error) {
+// NewPositionFromFEN parses the given FEN string as defined in https://www.chessprogramming.org/Forsyth-Edwards_Notation
+func NewPositionFromFEN(in string) (*Position, error) {
 	parts := strings.Split(in, " ")
 
 	if len(parts) != 6 {
 		return nil, fmt.Errorf("%w: expected FEN with 6 parts", ErrMalformedFEN)
 	}
 
-	p := &Game{}
+	p := &Position{}
 
 	ranks := strings.Split(parts[0], fenRankSeparator)
 
@@ -172,5 +172,113 @@ func NewGameFromFEN(in string) (*Game, error) {
 
 	p.hashFull()
 
+	p.computeAll()
+
 	return p, nil
+}
+
+// FEN returns a string version of the board according to https://www.chessprogramming.org/Forsyth-Edwards_Notation
+func (p *Position) FEN() string {
+	var s strings.Builder
+	empties := 0
+
+	// board:	if b.
+	for row := range 8 {
+		for col := range 8 {
+			p := p.index(row*8 + col)
+
+			if p == Empty {
+				empties++
+				continue
+			} else if empties > 0 {
+				fmt.Fprintf(&s, "%d", empties)
+				empties = 0
+			}
+
+			uncoloredPiece := p &^ (Black | White)
+			color := p & (Black | White)
+
+			var piece rune
+
+			switch uncoloredPiece {
+			case Bishop:
+				piece = 'b'
+			case King:
+				piece = 'k'
+			case Knight:
+				piece = 'n'
+			case Pawn:
+				piece = 'p'
+			case Queen:
+				piece = 'q'
+			case Rook:
+				piece = 'r'
+			default:
+				panic(fmt.Sprintf("unexpected chess.Piece: %#v", p))
+			}
+
+			if color == White {
+				// map to upper case
+				piece += 'A' - 'a'
+			}
+
+			s.WriteRune(piece)
+		}
+
+		if empties > 0 {
+			fmt.Fprintf(&s, "%d", empties)
+		}
+
+		if row != 7 {
+			s.WriteRune('/')
+		}
+		empties = 0
+	}
+
+	s.WriteRune(' ')
+
+	switch p.PlayerInTurn {
+	case Black:
+		s.WriteRune('b')
+	case White:
+		s.WriteRune('w')
+	default:
+		panic(fmt.Sprintf("unexpected player in turn: %#v", p.PlayerInTurn))
+	}
+
+	s.WriteRune(' ')
+
+	if p.castling.Has(CastleWhiteKing) {
+		s.WriteRune('K')
+	}
+	if p.castling.Has(CastleWhiteQueen) {
+		s.WriteRune('Q')
+	}
+	if p.castling.Has(CastleBlackKing) {
+		s.WriteRune('k')
+	}
+	if p.castling.Has(CastleBlackQueen) {
+		s.WriteRune('q')
+	}
+	if p.castling == NoCastling {
+		s.WriteRune('-')
+	}
+
+	s.WriteRune(' ')
+
+	if p.enPassantTarget != InvalidSquare {
+		s.WriteString(p.enPassantTarget.String())
+	} else {
+		s.WriteRune('-')
+	}
+
+	s.WriteRune(' ')
+
+	fmt.Fprintf(&s, "%d", p.HalfmoveClock)
+
+	s.WriteRune(' ')
+
+	fmt.Fprintf(&s, "%d", p.Moves)
+
+	return s.String()
 }

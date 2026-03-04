@@ -27,6 +27,8 @@ const (
 	CastleShort
 )
 
+const PromoteAny = PromoteQueen | PromoteRook | PromoteBishop | PromoteKnight
+
 type Move struct {
 	From    Square
 	To      Square
@@ -41,7 +43,7 @@ var InvalidMove = Move{From: InvalidSquare, To: InvalidSquare}
 // ParseMove parses a move given in pure coordinate notation
 // see https://www.chessprogramming.org/Algebraic_Chess_Notation#Pure_coordinate_notation
 //
-// for castling, enpassant etc. moves the current position is important, so this cannot parse those. See [Game.ParseMove] instead
+// for castling, enpassant etc. moves the current position is important, so this cannot parse those. See [Position.ParseMove] instead
 func ParseMove(in string) (Move, error) {
 	if len(in) != 4 && len(in) != 5 {
 		return InvalidMove, ErrInvalidMove
@@ -91,14 +93,15 @@ func (m Move) String() string {
 	s += m.From.String()
 	s += m.To.String()
 
-	switch m.Special {
-	case PromoteBishop:
+	// takes and promotion might be set
+	switch {
+	case m.Special.Has(PromoteBishop):
 		s += "b"
-	case PromoteKnight:
+	case m.Special.Has(PromoteKnight):
 		s += "n"
-	case PromoteQueen:
+	case m.Special.Has(PromoteQueen):
 		s += "q"
-	case PromoteRook:
+	case m.Special.Has(PromoteRook):
 		s += "r"
 	}
 

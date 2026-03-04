@@ -79,16 +79,19 @@ func comparePerft(t *testing.T, stockfish, local *uci.Client, fen string, depth 
 	expected := sfPerft.Moves
 
 	tooMany := diff(actual, expected)
-
-	if len(tooMany) > 0 {
-		t.Fatalf("local produced illegal moves: %v", tooMany)
-		return
-	}
-
 	missing := diff(expected, actual)
 
-	if len(missing) > 0 {
+	switch {
+	case len(tooMany) == 0 && len(missing) == 0:
+		// ok
+	case len(tooMany) > 0 && len(missing) == 0:
+		t.Fatalf("local produced illegal moves: %v", tooMany)
+		return
+	case len(tooMany) == 0 && len(missing) > 0:
 		t.Fatalf("local missing legal moves: %v", missing)
+		return
+	case len(tooMany) > 0 && len(missing) > 0:
+		t.Fatalf("local produced illegal moves: %v and missing moves: %v", tooMany, missing)
 		return
 	}
 

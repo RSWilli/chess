@@ -6,13 +6,15 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/rswilli/chess/internal/chess"
 )
 
 // Engine is the actual engine that responds to the UCI commands.
 // Any returned error will make [Server.Run] return and thus stop the server
 type Engine interface {
 	NewGame() error
-	Position(fen string, moves []string) error
+	Position(pos *chess.Position) error
 	Perft(depth int) (PerftResult, error)
 	Ready() error
 
@@ -122,7 +124,30 @@ func (s *Server) handlePositionCommand(line string) error {
 		return fmt.Errorf("malformed position command")
 	}
 
-	return s.h.Position(fen, moves)
+	var err error
+	var pos *chess.Position
+
+	if fen == StartPosition {
+		pos = chess.NewPosition()
+	} else {
+		pos, err = chess.NewPositionFromFEN(fen)
+
+		if err != nil {
+			return fmt.Errorf("could not parse FEN: %v", err)
+		}
+	}
+
+	for _, m := range moves {
+		move, err := pos.ParseMove(m)
+
+		if err != nil {
+			return fmt.Errorf("could not parse move: %v", err)
+		}
+
+		pos.DoMove(move)
+	}
+
+	return s.h.Position(pos)
 }
 
 func (s *Server) handleGoCommand(line string) error {

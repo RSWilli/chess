@@ -13,8 +13,6 @@ func TestParseMove(t *testing.T) {
 		"a4e5",
 		"g4h8",
 		"a7a8q",
-		"O-O-O",
-		"O-O",
 	}
 
 	for _, m := range moves {

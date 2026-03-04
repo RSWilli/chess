@@ -1,82 +1,89 @@
 const scheme = window.location.protocol === 'https:' ? 'wss://' : 'ws://'
 const wsUrl = new URL("websocket", scheme + window.location.host + window.location.pathname).toString()
 
-function connectWebSocket() {
-    console.log("connecting websocket to ", wsUrl)
-    const w = new WebSocket(wsUrl)
+/**
+ * handleNewMarkup takes a string of markup. It parses the html and expects a top level node with an id that is already present in the DOM.
+ * It then replaces the element in the DOM with the new one.
+ * @param {string} selector 
+ * @param {string} markup 
+ */
+function handleNewMarkup(selector, markup) {
+    promotionDialog.close()
 
-    // continuously ping the server to keep the connection alive and detect dead connections
-    let interval
+    const newEl = /** @type HTMLElement */ (new DOMParser().parseFromString(markup, 'text/html').body.firstChild)
 
-    w.addEventListener('open', (event) => {
-        console.log("ws connection established")
+    if (!newEl) {
+        console.log("could not parse DOM")
+        return
+    }
 
-        interval = setInterval(() => {
-            w.send('ping')
-        }, 1_000)
-    })
+    console.log(newEl)
 
-    w.addEventListener('message', (event) => {
-        const newEl = new DOMParser().parseFromString(event.data, 'text/html').body.firstChild
-        newEl && document.getElementById(newEl.id)?.replaceWith(newEl)
-        console.log("updated", newEl.id)
+    const target = document.querySelector(selector)
 
-        promotionDialog.close()
+    if (!target) {
+        console.log("target not found")
+        return
+    }
 
-        attachSquareClickHandlers()
-    })
-
-    w.addEventListener('close', (event) => {
-        clearInterval(interval)
-
-        console.log("websocket closed")
-
-        setTimeout(connectWebSocket, 2000)
-    })
-
-    w.addEventListener('error', (error) => {
-        console.error('WebSocket error:', error)
-        w.close()
-    })
+    target.replaceWith(newEl)
+    console.log("updated", selector)
 }
 
-connectWebSocket()
+const s = new EventSource("/events")
 
-function attachSquareClickHandlers() {
-    const tiles = document.querySelectorAll("#board .tile")
+/**
+ * @typedef {{selector: string, markup: string}} MarkupEvent
+ */
 
-    console.log(tiles)
+s.addEventListener("markup", function (ev) {
+    const data = /** @type {string}*/ (ev.data)
 
-    for (const el of tiles) {
-        el.addEventListener("click", handleSquareClick)
+    const payload = /** @type {MarkupEvent} */ (JSON.parse(data))
+
+    handleNewMarkup(payload.selector, payload.markup)
+})
+
+document.body.addEventListener("click", function (ev) {
+    const target = /** @type {HTMLElement} */ (ev.target)
+
+    if (target.classList.contains("tile")) {
+        handleSquareClick(target)
+        return
+    }
+})
+
+const promotionDialog = /** @type {HTMLDialogElement}*/ (document.getElementById("promotion"))
+
+/**
+ * 
+ * @param {HTMLElement} tile
+ * @returns 
+ */
+function handleSquareClick(tile) {
+    if (tile.classList.contains("promotion")) {
+        handlePromotion(tile.dataset.square, tile.dataset.move.split(","))
+        return
+    }
+
+    if (tile.dataset.move) {
+        fetch(`move/${tile.dataset.move}`, {
+            method: "PUT",
+        })
+    } else {
+        // (de-) select square
+        fetch(`square/${tile.dataset.square}`, {
+            method: "PUT",
+        })
     }
 }
 
 /**
- * @type {HTMLDialogElement}
+ * 
+ * @param {string} square 
+ * @param {string[]} moves 
  */
-const promotionDialog = document.getElementById("promotion")
-
-function handleSquareClick(ev) {
-    /**
-     * @type {HTMLElement | null}
-     */
-    const el = ev.target
-
-    if (!el) return
-
-    if (el.classList.contains("promotion")) {
-        handlePromotion(el.dataset.square)
-        return
-    }
-
-    // normal move
-    fetch(`square/${el.dataset.square}/x`, {
-        method: "PUT",
-    })
-}
-
-function handlePromotion(square) {
+function handlePromotion(square, moves) {
     promotionDialog.showModal()
 
     promotionDialog.addEventListener("close", ev => {
@@ -84,7 +91,9 @@ function handlePromotion(square) {
 
         if (!promotionDialog.returnValue) return
 
-        fetch(`square/${square}/${promotionDialog.returnValue}`, {
+        const selectedMove = moves.find(m => m.endsWith(promotionDialog.returnValue))
+
+        fetch(`move/${selectedMove}`, {
             method: "PUT",
         })
     }, {

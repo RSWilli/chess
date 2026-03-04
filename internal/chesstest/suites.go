@@ -2,7 +2,6 @@ package chesstest
 
 import (
 	_ "embed"
-	"fmt"
 	"strings"
 	"testing"
 )
@@ -32,6 +31,6 @@ func RunAll(t *testing.T, f func(t *testing.T, fen string)) {
 			return
 		}
 
-		fmt.Printf("%s for %s passed\n", t.Name(), fen)
+		t.Logf("%s for %s passed\n", t.Name(), fen)
 	}
 }

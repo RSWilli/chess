@@ -5,28 +5,27 @@ import (
 	"testing"
 
 	"github.com/rswilli/chess/internal/chess"
+	"github.com/rswilli/chess/internal/chesstest"
 )
 
 func TestBoard(t *testing.T) {
-	b := chess.NewGame()
+	b := chess.NewPosition()
 
 	fmt.Println(b)
 }
 
 func TestBoardFENs(t *testing.T) {
-	fens := []string{
-		"rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
-		"rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2",
-		"rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2",
-	}
-
-	for _, fen := range fens {
-		b, err := chess.NewGameFromFEN(fen)
+	chesstest.RunAll(t, func(t *testing.T, fen string) {
+		b, err := chess.NewPositionFromFEN(fen)
 
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		fmt.Println(b)
-	}
+		marshaledFEN := b.FEN()
+
+		if fen != marshaledFEN {
+			t.Fatalf("expected %q, got: %q", fen, marshaledFEN)
+		}
+	})
 }

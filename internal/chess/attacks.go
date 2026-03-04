@@ -30,13 +30,13 @@ func calculateAttackMaps(all, king, queens, rooks, bishops, knights, pawns BitBo
 
 	attacksFrom.set(king, kingMoves(king))
 
-	return transpose(attacksFrom), attacksTo
+	return transpose(attacksFrom), attacksFrom
 }
 
 // calculateSlidingKingAttacks returns a list of Bitboards that contain 1s everywhere that a piece must stand
 // to prevent a check from a sliding piece. This is needed to detect pinned pieces as well as force blocking
 // a check.
-func (p *Game) calculateSlidingKingAttacks(king, opponentQueens, opponentRooks, opponentBishops BitBoard) {
+func (p *Position) calculateSlidingKingAttacks(king, opponentQueens, opponentRooks, opponentBishops BitBoard) {
 	currentRay := 0
 
 	// we simulate the king as a queen, and check the rays individually for the correct pieces

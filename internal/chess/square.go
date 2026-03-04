@@ -1,6 +1,7 @@
 package chess
 
 import (
+	"encoding"
 	"fmt"
 	"math/bits"
 	"strings"
@@ -78,3 +79,17 @@ func NewSquare(rankIndex, fileIndex int) Square {
 func NewSquareFromIndex(i int) Square {
 	return Square(1 << i)
 }
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (t *Square) UnmarshalText(text []byte) error {
+	sq, err := ParseSquare(string(text))
+
+	if err != nil {
+		return err
+	}
+
+	*t = sq
+	return nil
+}
+
+var _ encoding.TextUnmarshaler = new(Square)

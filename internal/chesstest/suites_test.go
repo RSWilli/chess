@@ -1,7 +1,6 @@
 package chesstest_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/rswilli/chess/internal/chess"
@@ -10,7 +9,7 @@ import (
 
 func Test(t *testing.T) {
 	for _, fen := range chesstest.Suites {
-		board, err := chess.NewGameFromFEN(fen)
+		board, err := chess.NewPositionFromFEN(fen)
 
 		if err != nil {
 			t.Fatalf("invalid FEN %s: %v", fen, err)
@@ -18,6 +17,6 @@ func Test(t *testing.T) {
 
 		_ = board
 
-		fmt.Println(board.String())
+		t.Log(board.String())
 	}
 }
