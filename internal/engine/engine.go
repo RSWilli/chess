@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"sync"
+	"time"
 
 	"github.com/rswilli/chess/internal/chess"
 	"github.com/rswilli/chess/internal/uci"
@@ -135,6 +136,8 @@ func (e *Engine) search(ret chan uci.Bestmove, info chan uci.Info) {
 	}
 
 	i := rand.IntN(len(moves))
+
+	time.Sleep(250 * time.Millisecond)
 
 	ret <- uci.Bestmove{
 		BestMove: moves[i].String(),
