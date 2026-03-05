@@ -314,7 +314,5 @@ func (p *Position) Copy() *Position {
 	historyCopy := make([]board, len(c.history))
 	copy(historyCopy, c.history)
 
-	c.reset()
-
 	return &c
 }
