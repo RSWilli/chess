@@ -44,6 +44,7 @@ func (d Data) ClassesFor(fileIndex, rankIndex int) string {
 	}
 
 	square := chess.NewSquare(rankIndex, fileIndex)
+	piece := d.Board.Square(square)
 
 	if d.Selected == square {
 		classes = append(classes, "highlighted")
@@ -57,7 +58,7 @@ func (d Data) ClassesFor(fileIndex, rankIndex int) string {
 		}
 	}
 
-	if p := d.Board.Square(square); (p == (chess.King & d.Board.PlayerInTurn)) && d.Board.IsCheck() {
+	if (piece == (chess.King | d.Board.PlayerInTurn)) && d.Board.IsCheck() {
 		classes = append(classes, "check")
 	}
 
