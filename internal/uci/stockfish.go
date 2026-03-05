@@ -8,8 +8,12 @@ import (
 )
 
 func NewStockfish() (*Client, error) {
+	return NewClient("stockfish")
+}
+
+func NewClient(name string, arg ...string) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	cmd := exec.CommandContext(ctx, "stockfish")
+	cmd := exec.CommandContext(ctx, name, arg...)
 
 	var stdout io.ReadCloser
 	var stdin io.WriteCloser
