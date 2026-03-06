@@ -16,7 +16,7 @@ func TestBoard(t *testing.T) {
 
 func TestBoardFENs(t *testing.T) {
 	chesstest.RunAll(t, func(t *testing.T, fen string) {
-		b, err := chess.NewPositionFromFEN(fen)
+		b, err := chess.NewPositionFromFEN(fen, nil)
 
 		if err != nil {
 			t.Fatal(err)

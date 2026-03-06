@@ -34,7 +34,7 @@ func Test(t *testing.T) {
 
 	fmt.Printf("%#v\n", res)
 
-	gores, err := sf.Go(uci.GoOptions{
+	bm := sf.Go(uci.GoOptions{
 		Depth: 5,
 	})
 
@@ -42,5 +42,5 @@ func Test(t *testing.T) {
 		t.Fatalf("failed to run go: %v", err)
 	}
 
-	fmt.Printf("%#v\n", gores)
+	fmt.Printf("%#v\n", bm)
 }

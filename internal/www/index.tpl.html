@@ -14,9 +14,9 @@
 <body>
     <main>
         <div id="controls">
-
+            {{ template "controls.tpl.html" .Controls }}
         </div>
-        {{ template "board.tpl.html" . }}
+        {{ template "board.tpl.html" .Board }}
         <div id="history">
 
         </div>

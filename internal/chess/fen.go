@@ -62,8 +62,10 @@ var fenCastlingAbilityTranslation = map[rune]CastlingAbility{
 var ErrMalformedFEN = errors.New("given FEN is malformed")
 
 // NewPositionFromFEN parses the given FEN string as defined in https://www.chessprogramming.org/Forsyth-Edwards_Notation
-func NewPositionFromFEN(in string) (*Position, error) {
-	parts := strings.Split(in, " ")
+//
+// Additionally a list of moves can be passed, which are performed on the position before being returned
+func NewPositionFromFEN(fen string, moves []string) (*Position, error) {
+	parts := strings.Split(fen, " ")
 
 	if len(parts) != 6 {
 		return nil, fmt.Errorf("%w: expected FEN with 6 parts", ErrMalformedFEN)
@@ -152,7 +154,7 @@ func NewPositionFromFEN(in string) (*Position, error) {
 	halfMoves, err := strconv.ParseUint(parts[4], 10, 8)
 
 	if err != nil {
-		return nil, fmt.Errorf("%w: half move counter invalid: %s", ErrMalformedFEN, parts[4])
+		return nil, fmt.Errorf("%w: half move counter invp.Dalid: %s", ErrMalformedFEN, parts[4])
 	}
 
 	p.HalfmoveClock = uint8(halfMoves)
@@ -173,6 +175,16 @@ func NewPositionFromFEN(in string) (*Position, error) {
 	p.hashFull()
 
 	p.computeAll()
+
+	for _, m := range moves {
+		move, err := p.ParseMove(m)
+
+		if err != nil {
+			return nil, fmt.Errorf("could not parse move: %v", err)
+		}
+
+		p.DoMove(move)
+	}
 
 	return p, nil
 }

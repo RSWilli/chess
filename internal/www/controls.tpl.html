@@ -1,0 +1,16 @@
+<form action="/game/new" method="post">
+    <label for="white">White:</label>
+    <select name="white" id="white">
+        {{ range .Engines }}
+        <option value="{{ . }}">{{ . }}</option>
+        {{ end }}
+    </select>
+    <label for="black">Black:</label>
+    <select name="black" id="black">
+        {{ range .Engines }}
+        <option value="{{ . }}">{{ . }}</option>
+        {{ end }}
+    </select>
+
+    <button type="submit">New Game</button>
+</form>

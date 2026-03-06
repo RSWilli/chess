@@ -11,7 +11,7 @@ import (
 )
 
 func BenchmarkPerft(t *testing.B) {
-	local := uci.NewProxy(engine.NewEngine())
+	local := engine.NewEngine()
 
 	for t.Loop() {
 		local.Perft(5)
@@ -27,14 +27,14 @@ func TestPerft(t *testing.T) {
 
 	depth := 5
 
-	local := uci.NewProxy(engine.NewEngine())
+	local := engine.NewEngine()
 
 	chesstest.RunAll(t, func(t *testing.T, fen string) {
 		comparePerft(t, stockfish, local, fen, depth, nil)
 	})
 }
 
-func comparePerft(t *testing.T, stockfish, local *uci.Client, fen string, depth int, moves []string) {
+func comparePerft(t *testing.T, stockfish, local uci.Engine, fen string, depth int, moves []string) {
 	var err error
 	err = stockfish.NewGame()
 

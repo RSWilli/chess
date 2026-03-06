@@ -22,19 +22,28 @@ func RenderIndex(w io.Writer, data Data) error {
 	return templates.ExecuteTemplate(w, "index.tpl.html", data)
 }
 
-func RenderBoard(w io.Writer, data Data) error {
+func RenderBoard(w io.Writer, data BoardData) error {
 	return templates.ExecuteTemplate(w, "board.tpl.html", data)
 }
 
 type Data struct {
-	Board       *chess.Position
+	Board    BoardData
+	Controls ControlData
+}
+
+type ControlData struct {
+	Engines []string
+}
+
+type BoardData struct {
+	Position    *chess.Position
 	Selected    chess.Square
 	MoveTargets map[chess.Square][]chess.Move
 	Promotion   bool
 }
 
 // ClassesFor returns the HTML classes for the file and rank. Intended to be called from the template
-func (d Data) ClassesFor(fileIndex, rankIndex int) string {
+func (d BoardData) ClassesFor(fileIndex, rankIndex int) string {
 	var classes []string
 
 	if (rankIndex+fileIndex)%2 == 1 {
@@ -43,8 +52,13 @@ func (d Data) ClassesFor(fileIndex, rankIndex int) string {
 		classes = append(classes, "white")
 	}
 
+	if d.Position == nil {
+		// uninitialized game:
+		return strings.Join(classes, " ")
+	}
+
 	square := chess.NewSquare(rankIndex, fileIndex)
-	piece := d.Board.Square(square)
+	piece := d.Position.Square(square)
 
 	if d.Selected == square {
 		classes = append(classes, "highlighted")
@@ -58,14 +72,14 @@ func (d Data) ClassesFor(fileIndex, rankIndex int) string {
 		}
 	}
 
-	if (piece == (chess.King | d.Board.PlayerInTurn)) && d.Board.IsCheck() {
+	if (piece == (chess.King | d.Position.PlayerInTurn)) && d.Position.IsCheck() {
 		classes = append(classes, "check")
 	}
 
 	return strings.Join(classes, " ")
 }
 
-func (d Data) MoveTo(fileIndex, rankIndex int) string {
+func (d BoardData) MoveTo(fileIndex, rankIndex int) string {
 	sq := chess.NewSquare(rankIndex, fileIndex)
 
 	moves, ok := d.MoveTargets[sq]
@@ -84,8 +98,12 @@ func (d Data) MoveTo(fileIndex, rankIndex int) string {
 }
 
 // PieceAt returns the URL of the image that is needed for the piece at file/rank or an empty string
-func (d Data) PieceAt(fileIndex, rankIndex int) string {
-	piece := d.Board.Square(chess.NewSquare(rankIndex, fileIndex))
+func (d BoardData) PieceAt(fileIndex, rankIndex int) string {
+	if d.Position == nil {
+		return ""
+	}
+
+	piece := d.Position.Square(chess.NewSquare(rankIndex, fileIndex))
 
 	if piece == chess.Empty {
 		return ""

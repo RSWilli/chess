@@ -2,9 +2,7 @@
 package mm
 
 import (
-	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/rswilli/chess/internal/chess"
@@ -18,17 +16,29 @@ const (
 	playerBlack player = "black"
 )
 
+type GameState int
+
+const (
+	Running GameState = iota
+	CheckMate
+	StaleMate
+	Error
+)
+
 type Game struct {
-	positionLock sync.Mutex
-	position     *chess.Position
+	position *chess.Position
+
+	state GameState
+
+	history []string
 
 	current player
 
-	white *uci.Client
-	black *uci.Client
+	white uci.Engine
+	black uci.Engine
 }
 
-func (g *Game) currentClient() *uci.Client {
+func (g *Game) Current() uci.Engine {
 	switch g.current {
 	case playerBlack:
 		return g.black
@@ -39,45 +49,35 @@ func (g *Game) currentClient() *uci.Client {
 	}
 }
 
-var ErrCheckMate = errors.New("checkmate")
-var ErrStaleMate = errors.New("stalemate")
-
 // Move lets the current side think about the move and performs it.
 func (g *Game) Move() error {
-	if g.position.IsCheckMate() {
-		return ErrCheckMate
-	}
-
-	if g.position.IsDraw() {
-		return ErrStaleMate
+	if g.state != Running {
+		return fmt.Errorf("game over")
 	}
 
 	var err error
-	current := g.currentClient()
+	current := g.Current()
 
-	err = current.Position(g.position.FEN(), nil)
+	err = current.Position(chess.DefaultFen, g.history)
 
 	if err != nil {
+		g.state = Error
+
 		return fmt.Errorf("could not set position for current player %s: %w", g.current, err)
 	}
 
-	bestmove, err := current.Go(uci.GoOptions{
+	bestmove := current.Go(uci.GoOptions{
 		MoveTime: 1 * time.Second,
 	})
-
-	if err != nil {
-		return fmt.Errorf("error while engine go command from player %s: %w", g.current, err)
-	}
 
 	move, err := g.position.ParseMove(bestmove.BestMove)
 
 	if err != nil {
-		return fmt.Errorf("received invalid move in current position from player %s, could not parse: %w", g.current, err)
+		g.state = Error
+		return fmt.Errorf("received invalid move %s in current position from player %s, could not parse: %w", bestmove.BestMove, g.current, err)
 	}
 
-	g.positionLock.Lock()
 	g.position.DoMove(move)
-	g.positionLock.Unlock()
 
 	if g.current == playerWhite {
 		g.current = playerBlack
@@ -85,17 +85,28 @@ func (g *Game) Move() error {
 		g.current = playerWhite
 	}
 
+	g.history = append(g.history, bestmove.BestMove)
+
+	if g.position.IsCheckMate() {
+		g.state = CheckMate
+	}
+
+	if g.position.IsDraw() {
+		g.state = StaleMate
+	}
+
 	return nil
 }
 
-func (g *Game) Position() *chess.Position {
-	g.positionLock.Lock()
-	defer g.positionLock.Unlock()
+func (g *Game) State() GameState {
+	return g.state
+}
 
+func (g *Game) Position() *chess.Position {
 	return g.position.Copy()
 }
 
-func NewGame(white, black *uci.Client) *Game {
+func NewGame(white, black uci.Engine) *Game {
 	black.NewGame()
 	white.NewGame()
 

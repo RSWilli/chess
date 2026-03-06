@@ -10,18 +10,23 @@ import (
 	"github.com/rswilli/chess/internal/chess"
 )
 
-// Engine is the actual engine that responds to the UCI commands.
+// Engine is a chess engine that responds to the UCI commands.
 // Any returned error will make [Server.Run] return and thus stop the server
 type Engine interface {
 	NewGame() error
-	Position(pos *chess.Position) error
+	Position(fen string, moves []string) error
 	Perft(depth int) (PerftResult, error)
 	Ready() error
 
-	Go(options GoOptions) (<-chan Bestmove, <-chan Info)
+	// Go starts the search with the given options and returns the best move.
+	//
+	// FIXME: stockfish outputs a lot of "info" messages here that get dropped by this
+	// interface
+	Go(options GoOptions) Bestmove
 	Stop()
 }
 
+// Server exposes an [Engine] to the given streams, typically [os.Stdout] and [os.Stdin]
 type Server struct {
 	r io.Reader
 	w io.Writer
@@ -124,30 +129,11 @@ func (s *Server) handlePositionCommand(line string) error {
 		return fmt.Errorf("malformed position command")
 	}
 
-	var err error
-	var pos *chess.Position
-
 	if fen == StartPosition {
-		pos = chess.NewPosition()
-	} else {
-		pos, err = chess.NewPositionFromFEN(fen)
-
-		if err != nil {
-			return fmt.Errorf("could not parse FEN: %v", err)
-		}
+		fen = chess.DefaultFen
 	}
 
-	for _, m := range moves {
-		move, err := pos.ParseMove(m)
-
-		if err != nil {
-			return fmt.Errorf("could not parse move: %v", err)
-		}
-
-		pos.DoMove(move)
-	}
-
-	return s.h.Position(pos)
+	return s.h.Position(fen, moves)
 }
 
 func (s *Server) handleGoCommand(line string) error {
@@ -313,19 +299,9 @@ func (s *Server) handleGoCommand(line string) error {
 	}
 
 	go func() {
-		bestmove, infos := s.h.Go(opts)
+		bm := s.h.Go(opts)
 
-		go func() {
-			for i := range infos {
-				s.respond(i.String())
-			}
-		}()
-
-		go func() {
-			bm := <-bestmove
-
-			s.respond(bm.String())
-		}()
+		s.respond(bm.String())
 	}()
 
 	return nil

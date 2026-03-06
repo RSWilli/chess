@@ -9,11 +9,14 @@ import (
 	"time"
 )
 
+// Client talks to an engine via two streams in the uci protocol
 type Client struct {
 	close func()
 	scan  *bufio.Scanner
 	w     io.WriteCloser
 }
+
+var _ Engine = (*Client)(nil)
 
 func (c *Client) Close() {
 	c.close()
@@ -178,7 +181,7 @@ func (c *Client) Perft(depth int) (PerftResult, error) {
 	return PerftResult{Total: total, Moves: moves}, nil
 }
 
-func (c *Client) Go(opts GoOptions) (Bestmove, error) {
+func (c *Client) Go(opts GoOptions) Bestmove {
 	var parts []string
 
 	parts = append(parts, "go")
@@ -224,14 +227,14 @@ func (c *Client) Go(opts GoOptions) (Bestmove, error) {
 	err := c.writeCommand(strings.Join(parts, " "))
 
 	if err != nil {
-		return Bestmove{}, err
+		return Bestmove{}
 	}
 
 	for {
 		line, err := c.read()
 
 		if err != nil {
-			return Bestmove{}, err
+			return Bestmove{}
 		}
 
 		if strings.HasPrefix(line, "info") {
@@ -239,19 +242,26 @@ func (c *Client) Go(opts GoOptions) (Bestmove, error) {
 		}
 
 		if !strings.HasPrefix(line, "bestmove") {
-			return Bestmove{}, fmt.Errorf("unexpected response while go-ing: %s", line)
+			return Bestmove{} // unexpected command
 		}
 
 		parts := strings.Split(line, " ")
 
+		if len(parts) == 2 {
+			// no ponder move, e.g. checkmate
+			return Bestmove{
+				BestMove: parts[1],
+			}
+		}
+
 		if len(parts) != 4 || parts[2] != "ponder" {
-			return Bestmove{}, fmt.Errorf("bestmove response with unexpected format: %s", line)
+			return Bestmove{} // invalid format
 		}
 
 		return Bestmove{
 			BestMove: parts[1],
 			Ponder:   parts[3],
-		}, nil
+		}
 	}
 }
 
@@ -282,6 +292,16 @@ func (c *Client) Position(fen string, moves []string) error {
 	}
 
 	return nil
+}
+
+// Ready implements [Engine].
+func (c *Client) Ready() error {
+	return c.waitForReady()
+}
+
+// Stop implements [Engine].
+func (c *Client) Stop() {
+	c.close()
 }
 
 // func (c *Client) readInfo() (Info, error) {

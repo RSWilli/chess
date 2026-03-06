@@ -89,12 +89,20 @@ func (e *Engine) internalPerft(depth int) int {
 }
 
 // Position implements uci.Engine.
-func (e *Engine) Position(pos *chess.Position) error {
+func (e *Engine) Position(fen string, moves []string) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 
 	if e.searching {
 		return fmt.Errorf("search running cannot change position")
+	}
+
+	// TODO: the GUI passes an increasing list of moves on the starting position,
+	// optimize this so full parsing is only done when needed
+	pos, err := chess.NewPositionFromFEN(fen, moves)
+
+	if err != nil {
+		return fmt.Errorf("could not parse FEN: %w", err)
 	}
 
 	e.pos = pos
@@ -109,42 +117,43 @@ func (e *Engine) Ready() error {
 }
 
 // Go implements uci.Engine.
-func (e *Engine) Go(options uci.GoOptions) (<-chan uci.Bestmove, <-chan uci.Info) {
+func (e *Engine) Go(options uci.GoOptions) uci.Bestmove {
 	e.lock.Lock()
-	defer e.lock.Unlock()
+
+	if e.searching {
+		panic("double search")
+	}
 
 	e.searching = true
-	bm := make(chan uci.Bestmove)
-	info := make(chan uci.Info)
-
 	e.currentSearchOpts = &options
+	e.lock.Unlock()
 
-	go e.search(bm, info)
+	bm := e.search()
 
-	return bm, info
+	e.lock.Lock()
+	e.searching = true
+	e.lock.Unlock()
+
+	return bm
 }
 
-func (e *Engine) search(ret chan uci.Bestmove, info chan uci.Info) {
+func (e *Engine) search() uci.Bestmove {
 	moves := e.pos.GenerateMoves()
-	close(info) // Do we actually need to log info?
 
 	if len(moves) == 0 {
-		e.searching = false
-
-		close(ret)
-		return
+		return uci.Bestmove{}
 	}
 
 	i := rand.IntN(len(moves))
 
 	time.Sleep(250 * time.Millisecond)
 
-	ret <- uci.Bestmove{
+	e.searching = false
+
+	return uci.Bestmove{
 		BestMove: moves[i].String(),
 		Ponder:   "a1a2", // tmp
 	}
-
-	e.searching = false
 }
 
 // Stop implements uci.Engine.

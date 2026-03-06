@@ -30,7 +30,7 @@ type Position struct {
 }
 
 func NewPosition() *Position {
-	p, err := NewPositionFromFEN(DefaultFen)
+	p, err := NewPositionFromFEN(DefaultFen, nil)
 	// b, err := NewGameFromFEN("r3kbnr/1b3ppp/pqn5/1pp1P3/3p4/1BN2N2/PP2QPPP/R1BR2K1 w kq - 0 1")
 
 	if err != nil {

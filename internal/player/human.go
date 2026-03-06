@@ -81,41 +81,33 @@ func (h *Human) DoSquare(square chess.Square) {
 }
 
 // Go implements uci.Engine.
-func (h *Human) Go(options uci.GoOptions) (<-chan uci.Bestmove, <-chan uci.Info) {
+func (h *Human) Go(uci.GoOptions) uci.Bestmove {
 	h.lock.Lock()
-	defer h.lock.Unlock()
 
 	if h.searching {
-		panic("double search") // handle this better, because the other search can just return
+		panic("double search")
 	}
-
-	bm := make(chan uci.Bestmove)
-	info := make(chan uci.Info)
-	close(info)
 
 	stopSearch := make(chan struct{})
 	userMove := make(chan chess.Move)
-
-	go func() {
-		defer h.Stop()
-		select {
-		case <-stopSearch:
-			bm <- uci.Bestmove{} // null move
-			return
-		case m := <-userMove: // closed will return null move
-			// no ponder move
-			bm <- uci.Bestmove{
-				BestMove: m.String(),
-			}
-			return
-		}
-	}()
 
 	h.searching = true
 	h.stopSearch = stopSearch
 	h.userMove = userMove
 
-	return bm, info
+	h.lock.Unlock()
+
+	defer h.Stop()
+
+	select {
+	case <-stopSearch:
+		return uci.Bestmove{} // null move
+	case m := <-userMove: // closed will return null move
+		// no ponder move
+		return uci.Bestmove{
+			BestMove: m.String(),
+		}
+	}
 }
 
 // NewGame implements uci.Engine.
@@ -131,11 +123,17 @@ func (h *Human) Perft(depth int) (uci.PerftResult, error) {
 }
 
 // Position implements uci.Engine.
-func (h *Human) Position(pos *chess.Position) error {
+func (h *Human) Position(fen string, moves []string) error {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
 	h.stopUnlocked()
+
+	pos, err := chess.NewPositionFromFEN(fen, moves)
+
+	if err != nil {
+		return fmt.Errorf("could not parse FEN: %w", err)
+	}
 
 	h.pos = pos
 
