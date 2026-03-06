@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/rswilli/chess/internal/chess"
 	"github.com/rswilli/chess/internal/uci"
 )
 
@@ -45,6 +46,8 @@ const EngineLocal = "local"
 
 func NewEngine(name string) (uci.Engine, error) {
 	switch name {
+	case EngineLocal:
+		return chess.NewEngine(), nil
 	case EngineStockfish:
 		return uci.NewStockfish()
 	case EngineHuman:
