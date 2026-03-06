@@ -76,6 +76,18 @@ func (d BoardData) ClassesFor(fileIndex, rankIndex int) string {
 		classes = append(classes, "check")
 	}
 
+	if piece == (chess.King|d.Position.PlayerInTurn) && d.Position.IsCheckMate() {
+		classes = append(classes, "loose")
+	}
+
+	if (piece&^(chess.White|chess.Black) == chess.King) && piece != (chess.King|d.Position.PlayerInTurn) && d.Position.IsCheckMate() {
+		classes = append(classes, "win")
+	}
+
+	if (piece&^(chess.White|chess.Black) == chess.King) && d.Position.IsDraw() {
+		classes = append(classes, "draw")
+	}
+
 	return strings.Join(classes, " ")
 }
 

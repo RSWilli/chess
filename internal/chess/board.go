@@ -10,7 +10,8 @@ import (
 // board contains the board representation and the state of the board. This is tracked in the history
 // of [Position] and contains all informations needed for move generation (exept draw by repetition).
 type board struct {
-	// max 50, see https://www.chessprogramming.org/Fifty-move_Rule
+	// HalveMoveClock gets incremented after each move that doesn't capture or move a pawn.
+	// max 100, see https://www.chessprogramming.org/Fifty-move_Rule
 	HalfmoveClock uint8
 
 	PlayerInTurn    Piece

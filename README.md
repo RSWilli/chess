@@ -18,3 +18,6 @@ Chess rules are tested against [stockfish](https://stockfishchess.org/)
 ## Attributions
 
 * chess piece svgs taken from https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces
+* Bootstrap Icons:
+  * Trophy: https://icons.getbootstrap.com/icons/trophy-fill/
+  * Flag: https://icons.getbootstrap.com/icons/flag/

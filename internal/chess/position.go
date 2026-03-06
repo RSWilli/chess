@@ -43,7 +43,8 @@ func NewPosition() *Position {
 func (p *Position) DoMove(m Move) {
 	p.history = append(p.history, p.board)
 
-	pawnMove := false
+	// will be reset later if applicable
+	p.HalfmoveClock++
 
 	if m.Special.Has(CastleLong | CastleShort) {
 		// Castling move:
@@ -92,8 +93,9 @@ func (p *Position) DoMove(m Move) {
 	} else {
 		piece := p.Square(m.From)
 
-		if piece == Pawn {
-			pawnMove = true
+		if piece == Pawn || m.Special.Has(Captures) {
+			// 50 Move rule
+			p.HalfmoveClock = 0
 		}
 
 		// clear the old square
@@ -148,17 +150,12 @@ func (p *Position) DoMove(m Move) {
 		p.set(m.To, piece)
 	}
 
-	// halfmove clock for 50 move rule, see https://www.chessprogramming.org/Halfmove_Clock
-	previousCastling := p.history[len(p.history)-1].castling
-	nowCastling := p.castling
+	// FIXME: the wiki says that losing castling increments the halfmove clock
+	// // halfmove clock for 50 move rule, see https://www.chessprogramming.org/Halfmove_Clock
+	// previousCastling := p.history[len(p.history)-1].castling
+	// nowCastling := p.castling
 
-	lostCastling := previousCastling != nowCastling
-
-	if !pawnMove || lostCastling {
-		p.HalfmoveClock++
-	} else {
-		p.HalfmoveClock = 0
-	}
+	// lostCastling := previousCastling != nowCastling
 
 	if p.PlayerInTurn == Black {
 		// Fullmove counter only increments after black played
@@ -305,6 +302,10 @@ func (p *Position) IsCheckMate() bool {
 
 // IsDraw is meant to be called by the visualization and returns true if the game is drewn
 func (p *Position) IsDraw() bool {
+	if p.HalfmoveClock > 99 {
+		return true
+	}
+
 	return !p.IsCheck() && len(p.GenerateMoves()) == 0
 }
 
