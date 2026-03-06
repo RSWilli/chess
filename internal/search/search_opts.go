@@ -1,11 +1,11 @@
-package uci
+package search
 
 import (
 	"time"
 )
 
-// GoOptions is a struct containing the go parameters, see https://official-stockfish.github.io/docs/stockfish-wiki/UCI-&-Commands.html#go
-type GoOptions struct {
+// Options is a struct containing the parameters for the search, see https://official-stockfish.github.io/docs/stockfish-wiki/UCI-&-Commands.html#go
+type Options struct {
 	// SearchMoves restricts search to these moves only.
 	SearchMoves []string
 	// Ponder tells the engine to start pondering mode

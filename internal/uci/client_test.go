@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/rswilli/chess/internal/search"
 	"github.com/rswilli/chess/internal/uci"
 )
 
@@ -26,15 +27,15 @@ func Test(t *testing.T) {
 		t.Fatalf("could not set position: %v", err)
 	}
 
-	res, err := sf.Perft(5)
+	total, moves, err := sf.Perft(5)
 
 	if err != nil {
 		t.Fatalf("failed to run perft: %v", err)
 	}
 
-	fmt.Printf("%#v\n", res)
+	fmt.Printf("%d %#v\n", total, moves)
 
-	bm := sf.Go(uci.GoOptions{
+	bm, ponder := sf.Go(search.Options{
 		Depth: 5,
 	})
 
@@ -42,5 +43,5 @@ func Test(t *testing.T) {
 		t.Fatalf("failed to run go: %v", err)
 	}
 
-	fmt.Printf("%#v\n", bm)
+	fmt.Printf("%s %s\n", bm, ponder)
 }

@@ -7,6 +7,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/rswilli/chess/internal/search"
 )
 
 // Client talks to an engine via two streams in the uci protocol
@@ -117,21 +119,21 @@ func (c *Client) NewGame() error {
 	return c.waitForReady()
 }
 
-func (c *Client) Perft(depth int) (PerftResult, error) {
-	err := c.writeCommand(fmt.Sprintf("go perft %d", depth))
+func (c *Client) Perft(depth int) (total int, moves map[string]int, err error) {
+	err = c.writeCommand(fmt.Sprintf("go perft %d", depth))
 
 	if err != nil {
-		return PerftResult{}, err
+		return 0, nil, err
 	}
 
 	// first empty line signifies the end of the moves
 	response, err := c.readUntil("")
 
 	if err != nil {
-		return PerftResult{}, err
+		return 0, nil, err
 	}
 
-	moves := make(map[string]int)
+	moves = make(map[string]int)
 
 	for _, l := range response {
 		if strings.HasPrefix(l, "info") {
@@ -145,13 +147,13 @@ func (c *Client) Perft(depth int) (PerftResult, error) {
 		parts := strings.Split(l, ": ")
 
 		if len(parts) != 2 {
-			return PerftResult{}, fmt.Errorf("move wrong format: %s", l)
+			return 0, nil, fmt.Errorf("move wrong format: %s", l)
 		}
 
 		count, err := parseInt(parts[1])
 
 		if err != nil {
-			return PerftResult{}, err
+			return 0, nil, err
 		}
 
 		moves[parts[0]] = count
@@ -160,28 +162,28 @@ func (c *Client) Perft(depth int) (PerftResult, error) {
 	totalLine, err := c.read()
 
 	if err != nil {
-		return PerftResult{}, err
+		return 0, nil, err
 	}
 
 	totalNum := strings.TrimPrefix(totalLine, "Nodes searched: ")
 
-	total, err := parseInt(totalNum)
+	total, err = parseInt(totalNum)
 
 	if err != nil {
-		return PerftResult{}, err
+		return 0, nil, err
 	}
 
 	// ends with a new line
 	_, err = c.read()
 
 	if err != nil {
-		return PerftResult{}, err
+		return 0, nil, err
 	}
 
-	return PerftResult{Total: total, Moves: moves}, nil
+	return total, moves, nil
 }
 
-func (c *Client) Go(opts GoOptions) Bestmove {
+func (c *Client) Go(opts search.Options) (bestmove string, ponder string) {
 	var parts []string
 
 	parts = append(parts, "go")
@@ -227,14 +229,14 @@ func (c *Client) Go(opts GoOptions) Bestmove {
 	err := c.writeCommand(strings.Join(parts, " "))
 
 	if err != nil {
-		return Bestmove{}
+		return "", ""
 	}
 
 	for {
 		line, err := c.read()
 
 		if err != nil {
-			return Bestmove{}
+			return "", ""
 		}
 
 		if strings.HasPrefix(line, "info") {
@@ -242,26 +244,21 @@ func (c *Client) Go(opts GoOptions) Bestmove {
 		}
 
 		if !strings.HasPrefix(line, "bestmove") {
-			return Bestmove{} // unexpected command
+			return "", "" // unexpected command
 		}
 
 		parts := strings.Split(line, " ")
 
 		if len(parts) == 2 {
 			// no ponder move, e.g. checkmate
-			return Bestmove{
-				BestMove: parts[1],
-			}
+			return parts[1], ""
 		}
 
 		if len(parts) != 4 || parts[2] != "ponder" {
-			return Bestmove{} // invalid format
+			return "", "" // invalid format
 		}
 
-		return Bestmove{
-			BestMove: parts[1],
-			Ponder:   parts[3],
-		}
+		return parts[1], parts[3]
 	}
 }
 

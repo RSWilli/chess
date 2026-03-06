@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/rswilli/chess/internal/chess"
+	"github.com/rswilli/chess/internal/search"
 )
 
 // Engine is a chess engine that responds to the UCI commands.
@@ -15,14 +16,14 @@ import (
 type Engine interface {
 	NewGame() error
 	Position(fen string, moves []string) error
-	Perft(depth int) (PerftResult, error)
+	Perft(depth int) (total int, moves map[string]int, err error)
 	Ready() error
 
 	// Go starts the search with the given options and returns the best move.
 	//
 	// FIXME: stockfish outputs a lot of "info" messages here that get dropped by this
 	// interface
-	Go(options GoOptions) Bestmove
+	Go(options search.Options) (bestmove string, ponder string)
 	Stop()
 }
 
@@ -145,7 +146,7 @@ func (s *Server) handleGoCommand(line string) error {
 
 	parts = parts[1:]
 
-	opts := GoOptions{}
+	opts := search.Options{}
 
 	for len(parts) > 0 {
 		switch parts[0] {
@@ -269,8 +270,9 @@ func (s *Server) handleGoCommand(line string) error {
 			}
 
 			// Special case: when any argument is perft call the perft instead
+			var res perftResult
 
-			res, err := s.h.Perft(n)
+			res.total, res.moves, err = s.h.Perft(n)
 
 			if err != nil {
 				return err
@@ -299,7 +301,8 @@ func (s *Server) handleGoCommand(line string) error {
 	}
 
 	go func() {
-		bm := s.h.Go(opts)
+		var bm bestmove
+		bm.bestMove, bm.ponder = s.h.Go(opts)
 
 		s.respond(bm.String())
 	}()

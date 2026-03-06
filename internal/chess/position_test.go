@@ -52,8 +52,8 @@ func TestLegalMoveGen(t *testing.T) {
 			t.Fatal("could not init FEN: " + err.Error())
 		}
 
-		expectedMoves, err := stockfish.Perft(1)
-		expectedMoveList := slices.Sorted(maps.Keys(expectedMoves.Moves))
+		_, expectedMoves, err := stockfish.Perft(1)
+		expectedMoveList := slices.Sorted(maps.Keys(expectedMoves))
 
 		if err != nil {
 			t.Fatalf("Stockfish did not return moves: %v", err)
@@ -70,7 +70,7 @@ func TestLegalMoveGen(t *testing.T) {
 		generatedMoveList := slices.Sorted(maps.Keys(generatedMoves))
 
 		for m, move := range generatedMoves {
-			_, ok := expectedMoves.Moves[m]
+			_, ok := expectedMoves[m]
 
 			if !ok {
 				t.Logf("stockfish: %s", expectedMoveList)
@@ -79,7 +79,7 @@ func TestLegalMoveGen(t *testing.T) {
 			}
 		}
 
-		for m := range expectedMoves.Moves {
+		for m := range expectedMoves {
 			_, ok := generatedMoves[m]
 
 			if !ok {

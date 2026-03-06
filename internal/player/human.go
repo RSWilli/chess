@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/rswilli/chess/internal/chess"
+	"github.com/rswilli/chess/internal/search"
 	"github.com/rswilli/chess/internal/uci"
 )
 
@@ -81,7 +82,7 @@ func (h *Human) DoSquare(square chess.Square) {
 }
 
 // Go implements uci.Engine.
-func (h *Human) Go(uci.GoOptions) uci.Bestmove {
+func (h *Human) Go(search.Options) (bestmove string, ponder string) {
 	h.lock.Lock()
 
 	if h.searching {
@@ -101,12 +102,10 @@ func (h *Human) Go(uci.GoOptions) uci.Bestmove {
 
 	select {
 	case <-stopSearch:
-		return uci.Bestmove{} // null move
+		return "", "" // null move
 	case m := <-userMove: // closed will return null move
 		// no ponder move
-		return uci.Bestmove{
-			BestMove: m.String(),
-		}
+		return m.String(), ""
 	}
 }
 
@@ -118,8 +117,8 @@ func (h *Human) NewGame() error {
 }
 
 // Perft implements uci.Engine.
-func (h *Human) Perft(depth int) (uci.PerftResult, error) {
-	return uci.PerftResult{}, fmt.Errorf("not implemented")
+func (h *Human) Perft(depth int) (total int, moves map[string]int, err error) {
+	return 0, nil, fmt.Errorf("not implemented")
 }
 
 // Position implements uci.Engine.

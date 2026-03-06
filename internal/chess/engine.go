@@ -1,4 +1,4 @@
-package engine
+package chess
 
 import (
 	"fmt"
@@ -6,29 +6,28 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rswilli/chess/internal/chess"
-	"github.com/rswilli/chess/internal/uci"
+	"github.com/rswilli/chess/internal/search"
 )
 
 type Engine struct {
-	pos *chess.Position
+	pos *Position
 
 	lock sync.Mutex
 	// searching is used to check if the engine is searching but also to know when to abort the search in
 	// the search loop
 	searching         bool
-	currentSearchOpts *uci.GoOptions
+	currentSearchOpts *search.Options
 }
 
 func NewEngine() *Engine {
 	return &Engine{
-		pos: chess.NewPosition(),
+		pos: NewPosition(),
 	}
 }
 
 // NewGame implements uci.Engine.
 func (e *Engine) NewGame() error {
-	e.pos = chess.NewPosition()
+	e.pos = NewPosition()
 
 	// clear all caches here
 
@@ -36,17 +35,16 @@ func (e *Engine) NewGame() error {
 }
 
 // Perft implements uci.Engine.
-func (e *Engine) Perft(depth int) (uci.PerftResult, error) {
+func (e *Engine) Perft(depth int) (total int, moves map[string]int, err error) {
 	e.lock.Lock()
 	defer e.lock.Unlock()
 
 	if e.searching {
-		return uci.PerftResult{}, fmt.Errorf("search already running, wont do perft")
+		return 0, nil, fmt.Errorf("search already running, wont do perft")
 	}
 
-	res := uci.PerftResult{
-		Moves: make(map[string]int),
-	}
+	moves = make(map[string]int)
+	total = 0
 
 	for _, m := range e.pos.GenerateMoves() {
 		e.pos.DoMove(m)
@@ -56,11 +54,11 @@ func (e *Engine) Perft(depth int) (uci.PerftResult, error) {
 		}
 		e.pos.UndoMove()
 
-		res.Moves[m.String()] = visited
-		res.Total += visited
+		moves[m.String()] = visited
+		total += visited
 	}
 
-	return res, nil
+	return total, moves, nil
 }
 
 // internalPerft is called from [Engine.Perft] and instead of listing the moves it only counts the positions until depth
@@ -99,7 +97,7 @@ func (e *Engine) Position(fen string, moves []string) error {
 
 	// TODO: the GUI passes an increasing list of moves on the starting position,
 	// optimize this so full parsing is only done when needed
-	pos, err := chess.NewPositionFromFEN(fen, moves)
+	pos, err := NewPositionFromFEN(fen, moves)
 
 	if err != nil {
 		return fmt.Errorf("could not parse FEN: %w", err)
@@ -117,7 +115,7 @@ func (e *Engine) Ready() error {
 }
 
 // Go implements uci.Engine.
-func (e *Engine) Go(options uci.GoOptions) uci.Bestmove {
+func (e *Engine) Go(options search.Options) (bestmove string, ponder string) {
 	e.lock.Lock()
 
 	if e.searching {
@@ -134,14 +132,14 @@ func (e *Engine) Go(options uci.GoOptions) uci.Bestmove {
 	e.searching = true
 	e.lock.Unlock()
 
-	return bm
+	return bm, ""
 }
 
-func (e *Engine) search() uci.Bestmove {
+func (e *Engine) search() string {
 	moves := e.pos.GenerateMoves()
 
 	if len(moves) == 0 {
-		return uci.Bestmove{}
+		return ""
 	}
 
 	i := rand.IntN(len(moves))
@@ -150,10 +148,7 @@ func (e *Engine) search() uci.Bestmove {
 
 	e.searching = false
 
-	return uci.Bestmove{
-		BestMove: moves[i].String(),
-		Ponder:   "a1a2", // tmp
-	}
+	return moves[i].String()
 }
 
 // Stop implements uci.Engine.
@@ -164,5 +159,3 @@ func (e *Engine) Stop() {
 	e.searching = false
 	e.currentSearchOpts = nil
 }
-
-var _ uci.Engine = &Engine{}

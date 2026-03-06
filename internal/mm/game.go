@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/rswilli/chess/internal/chess"
+	"github.com/rswilli/chess/internal/search"
 	"github.com/rswilli/chess/internal/uci"
 )
 
@@ -66,15 +67,15 @@ func (g *Game) Move() error {
 		return fmt.Errorf("could not set position for current player %s: %w", g.current, err)
 	}
 
-	bestmove := current.Go(uci.GoOptions{
+	bestmove, _ := current.Go(search.Options{
 		MoveTime: 1 * time.Second,
 	})
 
-	move, err := g.Position.ParseMove(bestmove.BestMove)
+	move, err := g.Position.ParseMove(bestmove)
 
 	if err != nil {
 		g.state = Error
-		return fmt.Errorf("received invalid move %s in current position from player %s, could not parse: %w", bestmove.BestMove, g.current, err)
+		return fmt.Errorf("received invalid move %s in current position from player %s, could not parse: %w", bestmove, g.current, err)
 	}
 
 	g.Position.DoMove(move)
@@ -85,7 +86,7 @@ func (g *Game) Move() error {
 		g.current = playerWhite
 	}
 
-	g.history = append(g.history, bestmove.BestMove)
+	g.history = append(g.history, bestmove)
 
 	if g.Position.IsCheckMate() {
 		g.state = CheckMate

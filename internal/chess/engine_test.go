@@ -1,17 +1,17 @@
-package engine_test
+package chess_test
 
 import (
 	"iter"
 	"maps"
 	"testing"
 
+	"github.com/rswilli/chess/internal/chess"
 	"github.com/rswilli/chess/internal/chesstest"
-	"github.com/rswilli/chess/internal/engine"
 	"github.com/rswilli/chess/internal/uci"
 )
 
 func BenchmarkPerft(t *testing.B) {
-	local := engine.NewEngine()
+	local := chess.NewEngine()
 
 	for t.Loop() {
 		local.Perft(5)
@@ -27,7 +27,7 @@ func TestPerft(t *testing.T) {
 
 	depth := 5
 
-	local := engine.NewEngine()
+	local := chess.NewEngine()
 
 	chesstest.RunAll(t, func(t *testing.T, fen string) {
 		comparePerft(t, stockfish, local, fen, depth, nil)
@@ -57,26 +57,26 @@ func comparePerft(t *testing.T, stockfish, local uci.Engine, fen string, depth i
 		t.Fatal(err)
 	}
 
-	sfPerft, err := stockfish.Perft(depth)
+	sfTotal, sfMoves, err := stockfish.Perft(depth)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	localPerft, err := local.Perft(depth)
+	localTotal, localMoves, err := local.Perft(depth)
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if sfPerft.Total == localPerft.Total && maps.Equal(sfPerft.Moves, localPerft.Moves) && maps.Equal(localPerft.Moves, sfPerft.Moves) {
+	if sfTotal == localTotal && maps.Equal(sfMoves, localMoves) && maps.Equal(localMoves, sfMoves) {
 		return
 	}
 
 	t.Logf("pos: %s moves %v", fen, moves)
 
-	actual := localPerft.Moves
-	expected := sfPerft.Moves
+	actual := localMoves
+	expected := sfMoves
 
 	tooMany := diff(actual, expected)
 	missing := diff(expected, actual)

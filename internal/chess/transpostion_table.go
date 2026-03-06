@@ -1,7 +1,6 @@
-package engine
+package chess
 
 import (
-	"github.com/rswilli/chess/internal/chess"
 	"github.com/rswilli/chess/internal/zobrist"
 )
 
@@ -15,11 +14,11 @@ func newTranspostionTable[T any]() *transpositionTable[T] {
 	}
 }
 
-func (tt *transpositionTable[T]) set(pos *chess.Position, v T) {
+func (tt *transpositionTable[T]) set(pos *Position, v T) {
 	tt.m[pos.HashKey] = v
 }
 
-func (tt *transpositionTable[T]) get(pos *chess.Position) (v T, ok bool) {
+func (tt *transpositionTable[T]) get(pos *Position) (v T, ok bool) {
 	v, ok = tt.m[pos.HashKey]
 
 	return v, ok

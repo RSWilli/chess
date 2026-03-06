@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rswilli/chess/internal/engine"
+	"github.com/rswilli/chess/internal/chess"
 	"github.com/rswilli/chess/internal/uci"
 )
 
 func main() {
-	uciServer := uci.NewServer(os.Stdin, os.Stdout, engine.NewEngine())
+	uciServer := uci.NewServer(os.Stdin, os.Stdout, chess.NewEngine())
 
 	err := uciServer.Run()
 
