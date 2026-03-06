@@ -27,8 +27,8 @@ func TestDoUndoMoves(t *testing.T) {
 			copy.UndoMove()
 
 			if !copy.Equals(board) {
-				t.Logf("expected:\n%s", board.String())
-				t.Logf("got:\n%s", copy.String())
+				t.Logf("expected:\n%s", board.ASCIIArt())
+				t.Logf("got:\n%s", copy.ASCIIArt())
 
 				t.Fatalf("move %s was not undone correctly", m)
 			}
@@ -75,7 +75,7 @@ func TestLegalMoveGen(t *testing.T) {
 			if !ok {
 				t.Logf("stockfish: %s", expectedMoveList)
 				t.Logf("ours     : %s", generatedMoveList)
-				t.Fatalf("generated a move that was not expected:\n%s\n%s\n%s\n%#v", fen, board.String(), m, move)
+				t.Fatalf("generated a move that was not expected:\n%s\n%s\n%s\n%#v", fen, board.ASCIIArt(), m, move)
 			}
 		}
 
@@ -85,7 +85,7 @@ func TestLegalMoveGen(t *testing.T) {
 			if !ok {
 				t.Logf("stockfish: %s", expectedMoveList)
 				t.Logf("ours     : %s", generatedMoveList)
-				t.Fatalf("missing an expected move:\n%s\n%s\n%s", fen, board.String(), m)
+				t.Fatalf("missing an expected move:\n%s\n%s\n%s", fen, board.ASCIIArt(), m)
 			}
 		}
 	})

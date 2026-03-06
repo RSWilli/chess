@@ -34,7 +34,7 @@ type board struct {
 	HashKey zobrist.Hash
 }
 
-func (b board) String() string {
+func (b board) ASCIIArt() string {
 	sb := strings.Builder{}
 
 	for rank := range 8 {

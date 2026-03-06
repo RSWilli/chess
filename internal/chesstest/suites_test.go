@@ -17,6 +17,6 @@ func Test(t *testing.T) {
 
 		_ = board
 
-		t.Log(board.String())
+		t.Log(board.ASCIIArt())
 	}
 }
