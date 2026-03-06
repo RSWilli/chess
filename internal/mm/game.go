@@ -26,7 +26,7 @@ const (
 )
 
 type Game struct {
-	position *chess.Position
+	Position *chess.Position
 
 	state GameState
 
@@ -70,14 +70,14 @@ func (g *Game) Move() error {
 		MoveTime: 1 * time.Second,
 	})
 
-	move, err := g.position.ParseMove(bestmove.BestMove)
+	move, err := g.Position.ParseMove(bestmove.BestMove)
 
 	if err != nil {
 		g.state = Error
 		return fmt.Errorf("received invalid move %s in current position from player %s, could not parse: %w", bestmove.BestMove, g.current, err)
 	}
 
-	g.position.DoMove(move)
+	g.Position.DoMove(move)
 
 	if g.current == playerWhite {
 		g.current = playerBlack
@@ -87,11 +87,11 @@ func (g *Game) Move() error {
 
 	g.history = append(g.history, bestmove.BestMove)
 
-	if g.position.IsCheckMate() {
+	if g.Position.IsCheckMate() {
 		g.state = CheckMate
 	}
 
-	if g.position.IsDraw() {
+	if g.Position.IsDraw() {
 		g.state = StaleMate
 	}
 
@@ -102,16 +102,12 @@ func (g *Game) State() GameState {
 	return g.state
 }
 
-func (g *Game) Position() *chess.Position {
-	return g.position.Copy()
-}
-
 func NewGame(white, black uci.Engine) *Game {
 	black.NewGame()
 	white.NewGame()
 
 	return &Game{
-		position: chess.NewPosition(),
+		Position: chess.NewPosition(),
 		current:  playerWhite,
 		white:    white,
 		black:    black,

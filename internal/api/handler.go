@@ -154,7 +154,7 @@ func (h *Handler) getPosition() *chess.Position {
 		return nil
 	}
 
-	return h.game.Position()
+	return h.game.Position
 }
 
 // renderData returns the data object needed to render the current board
