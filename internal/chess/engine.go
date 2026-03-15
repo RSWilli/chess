@@ -129,7 +129,7 @@ func (e *Engine) Go(options search.Options) (bestmove string, ponder string) {
 	bm := e.search()
 
 	e.lock.Lock()
-	e.searching = true
+	e.searching = false
 	e.lock.Unlock()
 
 	return bm, ""
