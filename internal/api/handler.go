@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -41,8 +40,8 @@ func NewHandler() *Handler {
 	mux.HandleFunc("POST /game/new", h.handleNewGame)
 
 	mux.HandleFunc("GET /events", h.handleSubscriber)
-	mux.HandleFunc("PUT /move/{move}", h.handleMove)
-	mux.HandleFunc("PUT /square/{square}", h.handleSquare)
+	mux.HandleFunc("POST /promotion/{move}", h.handlePromotion)
+	mux.HandleFunc("POST /move/{move}", h.handleMove)
 	mux.HandleFunc("GET /{$}", h.handleIndex)
 	mux.Handle("GET /", www.StaticServer)
 
@@ -96,6 +95,35 @@ func (h *Handler) getHuman() *player.Human {
 	return human
 }
 
+func (h *Handler) handlePromotion(w http.ResponseWriter, r *http.Request) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	human := h.getHuman()
+
+	if human == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// m is the partial promotion move containing the start and target square but not the
+	// chosen piece
+	m := r.PathValue("move")
+
+	move, err := chess.ParseMove(m)
+
+	if err != nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	data := h.renderBoardData(move.From)
+
+	data.PromotionMove = m
+
+	h.renderIndex(w, data)
+}
+
 func (h *Handler) handleMove(w http.ResponseWriter, r *http.Request) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
@@ -116,36 +144,9 @@ func (h *Handler) handleMove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.broadcastBoard()
+	h.broadcastChange()
 
-	w.Write([]byte("ok"))
-}
-
-func (h *Handler) handleSquare(w http.ResponseWriter, r *http.Request) {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-
-	human := h.getHuman()
-
-	if human == nil {
-		http.Error(w, "human is not in turn", http.StatusBadRequest)
-		return
-	}
-
-	sq := r.PathValue("square")
-
-	square, err := chess.ParseSquare(sq)
-
-	if err != nil {
-		http.Error(w, "invalid square", http.StatusBadRequest)
-		return
-	}
-
-	human.DoSquare(square)
-
-	h.broadcastBoard()
-
-	w.Write([]byte("ok"))
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 // getPosition returns the current position or nil if no game is active. Must be called with the lock held
@@ -158,35 +159,28 @@ func (h *Handler) getPosition() *chess.Position {
 }
 
 // renderData returns the data object needed to render the current board
-func (h *Handler) renderBoardData() www.BoardData {
+func (h *Handler) renderBoardData(selectedSquare chess.Square) www.BoardData {
 	position := h.getPosition()
+	sources := make(map[chess.Square]struct{})
 	targets := make(map[chess.Square][]chess.Move)
-	promotion := false
-
-	var currentSquare chess.Square
-
-	if h := h.getHuman(); h != nil {
-		currentSquare = h.CurrentSquare()
-	}
 
 	if position != nil {
 		moves := position.GenerateMoves()
 
-		if currentSquare != chess.InvalidSquare {
-			for _, m := range moves {
-				if m.From == currentSquare {
-					promotion = m.Special.Has(chess.PromoteAny)
-					targets[m.To] = append(targets[m.To], m)
-				}
+		for _, m := range moves {
+			sources[m.From] = struct{}{}
+
+			if m.From == selectedSquare {
+				targets[m.To] = append(targets[m.To], m)
 			}
 		}
 	}
 
 	return www.BoardData{
 		Position:    position,
-		Selected:    currentSquare,
+		Selected:    selectedSquare,
+		MoveSources: sources,
 		MoveTargets: targets,
-		Promotion:   promotion,
 	}
 }
 
@@ -211,6 +205,10 @@ func (h *Handler) handleNewGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.game != nil {
+		h.game.Stop()
+	}
+
 	h.game = mm.NewGame(whitePlayer, blackPlayer)
 	h.gamecond.Signal()
 
@@ -221,6 +219,59 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
+	var square chess.Square
+	sq := r.URL.Query().Get("square")
+
+	if sq != "" {
+		human := h.getHuman()
+		if human == nil {
+			slog.Warn("human is not in turn")
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+
+			return
+		}
+
+		pos := h.getPosition()
+
+		if pos == nil {
+			slog.Warn("gamne not started")
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+
+			return
+		}
+
+		parsed, err := chess.ParseSquare(sq)
+
+		if err != nil {
+			slog.Warn("invalid square given", "square", sq)
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+
+			return
+		}
+
+		valid := false
+
+		for _, m := range pos.GenerateMoves() {
+			if m.From == parsed {
+				valid = true
+				break
+			}
+		}
+
+		if !valid {
+			slog.Warn("invalid square given", "square", sq)
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+
+			return
+		}
+
+		square = parsed
+	}
+
+	h.renderIndex(w, h.renderBoardData(square))
+}
+
+func (h *Handler) renderIndex(w http.ResponseWriter, data www.BoardData) {
 	engines, err := player.AvailableEngines()
 
 	if err != nil {
@@ -230,7 +281,7 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = www.RenderIndex(w, www.Data{
-		Board: h.renderBoardData(),
+		Board: data,
 		Controls: www.ControlData{
 			Engines: engines,
 		},
@@ -242,22 +293,11 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handler) broadcastBoard() {
-	var buf bytes.Buffer
-
-	err := www.RenderBoard(&buf, h.renderBoardData())
-
-	if err != nil {
-		panic(fmt.Sprintf("error rendering board: %v", err))
-	}
-
+func (h *Handler) broadcastChange() {
 	ev := sse.Event{
 		ID:    fmt.Sprintf("id-%d", h.eventid),
-		Event: EventMarkup,
-		Data: Markup{
-			Selector: "#board",
-			Markup:   buf.String(),
-		},
+		Event: "change",
+		Data:  struct{}{},
 	}
 
 	h.eventid++
@@ -286,7 +326,7 @@ func (h *Handler) runGameLoop() {
 			slog.Error("error while performing move in game", "error", err)
 		}
 
-		h.broadcastBoard()
+		h.broadcastChange()
 		h.lock.Unlock()
 	}
 }

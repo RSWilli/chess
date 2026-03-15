@@ -36,10 +36,14 @@ type ControlData struct {
 }
 
 type BoardData struct {
-	Position    *chess.Position
-	Selected    chess.Square
+	Position *chess.Position
+	Selected chess.Square
+	// MoveSources contains all squares from which a move can be performed
+	MoveSources map[chess.Square]struct{}
+	// MoveTargets contains target squares and their moves from a selected start square
 	MoveTargets map[chess.Square][]chess.Move
-	Promotion   bool
+	// PromotionMove is the pawn move that will lead to a promotion, but without the choses piece type
+	PromotionMove string
 }
 
 // ClassesFor returns the HTML classes for the file and rank. Intended to be called from the template
@@ -66,10 +70,6 @@ func (d BoardData) ClassesFor(fileIndex, rankIndex int) string {
 
 	if _, ok := d.MoveTargets[square]; ok {
 		classes = append(classes, "target")
-
-		if d.Promotion {
-			classes = append(classes, "promotion")
-		}
 	}
 
 	if (piece == (chess.King | d.Position.PlayerInTurn)) && d.Position.IsCheck() {
@@ -91,22 +91,34 @@ func (d BoardData) ClassesFor(fileIndex, rankIndex int) string {
 	return strings.Join(classes, " ")
 }
 
+func (d BoardData) CanMoveFrom(fileIndex, rankIndex int) bool {
+	sq := chess.NewSquare(rankIndex, fileIndex)
+
+	_, ok := d.MoveSources[sq]
+
+	return ok
+}
+
 func (d BoardData) MoveTo(fileIndex, rankIndex int) string {
 	sq := chess.NewSquare(rankIndex, fileIndex)
 
-	moves, ok := d.MoveTargets[sq]
+	moves := d.MoveTargets[sq]
 
-	if !ok {
+	if len(moves) == 0 {
 		return ""
 	}
 
-	var ms []string
+	// remove the promotion flag:
+	return moves[0].From.String() + moves[0].To.String()
+}
 
-	for _, m := range moves {
-		ms = append(ms, m.String())
-	}
+func (d BoardData) PromotionTo(fileIndex, rankIndex int) bool {
+	sq := chess.NewSquare(rankIndex, fileIndex)
 
-	return strings.Join(ms, ",")
+	moves := d.MoveTargets[sq]
+
+	// a promotion happens when the same target square has multiple possible moves:
+	return len(moves) > 1
 }
 
 // PieceAt returns the URL of the image that is needed for the piece at file/rank or an empty string

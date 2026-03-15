@@ -39,6 +39,11 @@ type Game struct {
 	black uci.Engine
 }
 
+func (g *Game) Stop() {
+	g.white.Stop()
+	g.black.Stop()
+}
+
 func (g *Game) Current() uci.Engine {
 	switch g.current {
 	case playerBlack:

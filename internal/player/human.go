@@ -2,8 +2,6 @@ package player
 
 import (
 	"fmt"
-	"log/slog"
-	"slices"
 	"sync"
 
 	"github.com/rswilli/chess/internal/chess"
@@ -21,9 +19,6 @@ type Human struct {
 	searching  bool
 	stopSearch chan struct{}
 	userMove   chan chess.Move
-
-	// currentSquare is the square that was selected for the next move
-	currentSquare chess.Square
 }
 
 func NewHuman() *Human {
@@ -32,19 +27,9 @@ func NewHuman() *Human {
 	}
 }
 
-func (h *Human) CurrentSquare() chess.Square {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-
-	return h.currentSquare
-}
-
 func (h *Human) DoMove(movestr string) error {
 	h.lock.Lock()
 	defer h.lock.Unlock()
-
-	// in any case, deselect the current square
-	h.currentSquare = chess.InvalidSquare
 
 	move, err := h.pos.ParseMove(movestr)
 
@@ -55,30 +40,6 @@ func (h *Human) DoMove(movestr string) error {
 	h.userMove <- move
 
 	return nil
-}
-
-// DoSquare selects the field for making a move
-func (h *Human) DoSquare(square chess.Square) {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-
-	if !h.searching {
-		return
-	}
-
-	moves := h.pos.GenerateMoves()
-
-	hasMove := slices.ContainsFunc(moves, func(m chess.Move) bool {
-		return m.From == square
-	})
-
-	if !hasMove {
-		return
-	}
-
-	slog.Info("human set selected square", "square", square.String())
-
-	h.currentSquare = square
 }
 
 // Go implements uci.Engine.

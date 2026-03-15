@@ -28,6 +28,7 @@ main {
 .tile {
     position: relative;
     aspect-ratio: 1;
+    border: 0;
 
     display: flex;
     justify-content: center;
@@ -109,11 +110,6 @@ span {
 
 #promotion {
     position: fixed;
-    transform: translateY(-50%);
-    max-width: 400px;
-    max-height: 100px;
-    width: 100vw;
-    height: 100vh;
 
     &::backdrop {
         background-color: rgba(169, 169, 169, 0.373);
