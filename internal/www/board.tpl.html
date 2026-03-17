@@ -9,26 +9,38 @@
     <span>{{ $rank }}</span>
     {{ range $j, $file := files }}
     {{- $canMoveFrom := $.CanMoveFrom $j $i }}
-    {{- $move := $.MoveTo $j $i }}
-    {{- $promotion := $.PromotionTo $j $i }}
+    {{- $move := $.RegularMoveTo $j $i }}
+    {{- $promotionMoves := $.PromotionMovesTo $j $i }}
+    {{ $pieceAt := $.PieceAt $j $i }}
     {{ if $canMoveFrom }}
         <a href="/?square={{ $file }}{{ $rank }}" class="tile {{ $.ClassesFor $j $i }}" data-square="{{ $file }}{{ $rank }}">
-            {{ $pieceAt := $.PieceAt $j $i }}
             {{ if $pieceAt}}
             <img class="piece" src="{{ $pieceAt }}" draggable="false">
             {{ end }}
         </a>
-    {{ else }}
-        <button type="submit" class="tile {{ $.ClassesFor $j $i }}" data-square="{{ $file }}{{ $rank }}"
-            {{ if and $move (not $promotion) }}
-                formaction="/move/{{ $move }}"
-            {{ else if $move }}
-                formaction="/promotion/{{ $move }}"
-            {{ else }}
-                disabled
+    {{ else if $move }}
+        <button type="submit" class="tile {{ $.ClassesFor $j $i }}" data-square="{{ $file }}{{ $rank }}" formaction="/move/{{ $move }}">
+            {{ if $pieceAt}}
+            <img class="piece" src="{{ $pieceAt }}" draggable="false">
             {{ end }}
-        >
-            {{ $pieceAt := $.PieceAt $j $i }}
+        </button>
+    {{ else if len $promotionMoves }}
+        <details class="promotiontile" name="promotions">
+            <summary class="tile {{ $.ClassesFor $j $i }}" data-square="{{ $file }}{{ $rank }}">
+                {{ if $pieceAt}}
+                <img class="piece" src="{{ $pieceAt }}" draggable="false">
+                {{ end }}
+            </summary>
+            <div class="promotionmoves rank-{{ $rank }}">
+                {{ range $move := $promotionMoves }}
+                <button formaction="/move/{{ $move }}" class="tile" type="submit">
+                    <img class="piece" src="{{ $.PromotionPiece $move }}" draggable="false">
+                </button>
+                {{ end }}
+            </div>
+        </details>
+    {{ else }}
+        <button type="submit" class="tile {{ $.ClassesFor $j $i }}" data-square="{{ $file }}{{ $rank }}" disabled>
             {{ if $pieceAt}}
             <img class="piece" src="{{ $pieceAt }}" draggable="false">
             {{ end }}
@@ -44,26 +56,3 @@
     {{ end}}
     <span></span>
 </form>
-{{ if .PromotionMove }}
-<dialog id="promotion" open closedby="none">
-    <form method="post">
-        <div id="dialog-content">
-            <button formaction="/move/{{ .PromotionMove }}q" class="tile" type="submit">
-                <img class="piece" src="/static/qw.svg" draggable="false">
-            </button>
-            <button formaction="/move/{{ .PromotionMove }}r" class="tile" type="submit">
-                <img class="piece" src="/static/rw.svg" draggable="false">
-            </button>
-            <button formaction="/move/{{ .PromotionMove }}b" class="tile" type="submit">
-                <img class="piece" src="/static/bw.svg" draggable="false">
-            </button>
-            <button formaction="/move/{{ .PromotionMove }}n" class="tile" type="submit">
-                <img class="piece" src="/static/nw.svg" draggable="false">
-            </button>
-        </div>
-        <div>
-            <button id="closeModal" type="reset">Close</button>
-        </div>
-    </form>
-</dialog>
-{{ end }}

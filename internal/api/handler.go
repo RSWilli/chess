@@ -40,7 +40,6 @@ func NewHandler() *Handler {
 	mux.HandleFunc("POST /game/new", h.handleNewGame)
 
 	mux.HandleFunc("GET /events", h.handleSubscriber)
-	mux.HandleFunc("POST /promotion/{move}", h.handlePromotion)
 	mux.HandleFunc("POST /move/{move}", h.handleMove)
 	mux.HandleFunc("GET /{$}", h.handleIndex)
 	mux.Handle("GET /", www.StaticServer)
@@ -93,35 +92,6 @@ func (h *Handler) getHuman() *player.Human {
 	}
 
 	return human
-}
-
-func (h *Handler) handlePromotion(w http.ResponseWriter, r *http.Request) {
-	h.lock.Lock()
-	defer h.lock.Unlock()
-
-	human := h.getHuman()
-
-	if human == nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-
-	// m is the partial promotion move containing the start and target square but not the
-	// chosen piece
-	m := r.PathValue("move")
-
-	move, err := chess.ParseMove(m)
-
-	if err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-
-	data := h.renderBoardData(move.From)
-
-	data.PromotionMove = m
-
-	h.renderIndex(w, data)
 }
 
 func (h *Handler) handleMove(w http.ResponseWriter, r *http.Request) {

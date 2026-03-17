@@ -2,6 +2,7 @@ package www
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -42,8 +43,6 @@ type BoardData struct {
 	MoveSources map[chess.Square]struct{}
 	// MoveTargets contains target squares and their moves from a selected start square
 	MoveTargets map[chess.Square][]chess.Move
-	// PromotionMove is the pawn move that will lead to a promotion, but without the choses piece type
-	PromotionMove string
 }
 
 // ClassesFor returns the HTML classes for the file and rank. Intended to be called from the template
@@ -99,26 +98,30 @@ func (d BoardData) CanMoveFrom(fileIndex, rankIndex int) bool {
 	return ok
 }
 
-func (d BoardData) MoveTo(fileIndex, rankIndex int) string {
+func (d BoardData) RegularMoveTo(fileIndex, rankIndex int) string {
 	sq := chess.NewSquare(rankIndex, fileIndex)
 
 	moves := d.MoveTargets[sq]
 
-	if len(moves) == 0 {
+	if len(moves) != 1 {
+		// no moves or promotions
 		return ""
 	}
 
-	// remove the promotion flag:
-	return moves[0].From.String() + moves[0].To.String()
+	return moves[0].String()
 }
 
-func (d BoardData) PromotionTo(fileIndex, rankIndex int) bool {
+func (d BoardData) PromotionMovesTo(fileIndex, rankIndex int) []chess.Move {
 	sq := chess.NewSquare(rankIndex, fileIndex)
 
 	moves := d.MoveTargets[sq]
 
-	// a promotion happens when the same target square has multiple possible moves:
-	return len(moves) > 1
+	if len(moves) <= 1 {
+		// needs multiple moves to the same square for promotion move
+		return nil
+	}
+
+	return moves
 }
 
 // PieceAt returns the URL of the image that is needed for the piece at file/rank or an empty string
@@ -134,6 +137,22 @@ func (d BoardData) PieceAt(fileIndex, rankIndex int) string {
 	}
 
 	return pieceImgSrc[piece]
+}
+
+// PromotionPiece returns the URL of the image that corresponds to the given promotion move
+func (d BoardData) PromotionPiece(m chess.Move) string {
+	switch m.Special & chess.PromoteAny {
+	case chess.PromoteBishop:
+		return pieceImgSrc[d.Position.PlayerInTurn|chess.Bishop]
+	case chess.PromoteKnight:
+		return pieceImgSrc[d.Position.PlayerInTurn|chess.Knight]
+	case chess.PromoteQueen:
+		return pieceImgSrc[d.Position.PlayerInTurn|chess.Queen]
+	case chess.PromoteRook:
+		return pieceImgSrc[d.Position.PlayerInTurn|chess.Rook]
+	default:
+		panic(fmt.Sprintf("unexpected chess.MoveSpecial: %#v", m.Special))
+	}
 }
 
 var funcMap = template.FuncMap(map[string]any{
