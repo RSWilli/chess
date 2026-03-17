@@ -33,8 +33,6 @@ main {
     display: flex;
     justify-content: center;
     align-items: center;
-
-    cursor: pointer;
 }
 
 .piece {
@@ -88,8 +86,10 @@ main {
 
 .target {
     position: relative;
+    cursor: pointer;
 
     &::after {
+        pointer-events: none;
         position: absolute;
         top: 35%;
         left: 35%;

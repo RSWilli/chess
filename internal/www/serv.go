@@ -46,10 +46,15 @@ type BoardData struct {
 }
 
 // ClassesFor returns the HTML classes for the file and rank. Intended to be called from the template
-func (d BoardData) ClassesFor(fileIndex, rankIndex int) string {
+func (d BoardData) ClassesFor(sq string) string {
 	var classes []string
+	square, err := chess.ParseSquare(sq)
 
-	if (rankIndex+fileIndex)%2 == 1 {
+	if err != nil {
+		panic(err)
+	}
+
+	if (square.Rank()+square.File())%2 == 1 {
 		classes = append(classes, "black")
 	} else {
 		classes = append(classes, "white")
@@ -60,7 +65,6 @@ func (d BoardData) ClassesFor(fileIndex, rankIndex int) string {
 		return strings.Join(classes, " ")
 	}
 
-	square := chess.NewSquare(rankIndex, fileIndex)
 	piece := d.Position.Square(square)
 
 	if d.Selected == square {
@@ -90,18 +94,26 @@ func (d BoardData) ClassesFor(fileIndex, rankIndex int) string {
 	return strings.Join(classes, " ")
 }
 
-func (d BoardData) CanMoveFrom(fileIndex, rankIndex int) bool {
-	sq := chess.NewSquare(rankIndex, fileIndex)
+func (d BoardData) CanMoveFrom(sq string) bool {
+	square, err := chess.ParseSquare(sq)
 
-	_, ok := d.MoveSources[sq]
+	if err != nil {
+		panic(err)
+	}
+
+	_, ok := d.MoveSources[square]
 
 	return ok
 }
 
-func (d BoardData) RegularMoveTo(fileIndex, rankIndex int) string {
-	sq := chess.NewSquare(rankIndex, fileIndex)
+func (d BoardData) RegularMoveTo(sq string) string {
+	square, err := chess.ParseSquare(sq)
 
-	moves := d.MoveTargets[sq]
+	if err != nil {
+		panic(err)
+	}
+
+	moves := d.MoveTargets[square]
 
 	if len(moves) != 1 {
 		// no moves or promotions
@@ -111,10 +123,14 @@ func (d BoardData) RegularMoveTo(fileIndex, rankIndex int) string {
 	return moves[0].String()
 }
 
-func (d BoardData) PromotionMovesTo(fileIndex, rankIndex int) []chess.Move {
-	sq := chess.NewSquare(rankIndex, fileIndex)
+func (d BoardData) PromotionMovesTo(sq string) []chess.Move {
+	square, err := chess.ParseSquare(sq)
 
-	moves := d.MoveTargets[sq]
+	if err != nil {
+		panic(err)
+	}
+
+	moves := d.MoveTargets[square]
 
 	if len(moves) <= 1 {
 		// needs multiple moves to the same square for promotion move
@@ -125,12 +141,18 @@ func (d BoardData) PromotionMovesTo(fileIndex, rankIndex int) []chess.Move {
 }
 
 // PieceAt returns the URL of the image that is needed for the piece at file/rank or an empty string
-func (d BoardData) PieceAt(fileIndex, rankIndex int) string {
+func (d BoardData) PieceAt(sq string) string {
 	if d.Position == nil {
 		return ""
 	}
 
-	piece := d.Position.Square(chess.NewSquare(rankIndex, fileIndex))
+	square, err := chess.ParseSquare(sq)
+
+	if err != nil {
+		panic(err)
+	}
+
+	piece := d.Position.Square(square)
 
 	if piece == chess.Empty {
 		return ""

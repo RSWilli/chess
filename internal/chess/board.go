@@ -170,7 +170,7 @@ func (b *board) removeCastling(ab CastlingAbility) {
 func (b *board) clearEnpassant() {
 	if b.enPassantTarget != InvalidSquare {
 		// the hash contains the en passant square, so clear it
-		b.HashKey = b.HashKey.Update(zobrist.EnPassantAFile + b.enPassantTarget.file())
+		b.HashKey = b.HashKey.Update(zobrist.EnPassantAFile + b.enPassantTarget.File())
 		b.enPassantTarget = InvalidSquare
 	}
 }
@@ -179,7 +179,7 @@ func (b *board) setEnpassant(sq Square) {
 	b.clearEnpassant()
 
 	b.enPassantTarget = sq
-	b.HashKey = b.HashKey.Update(zobrist.EnPassantAFile + b.enPassantTarget.file())
+	b.HashKey = b.HashKey.Update(zobrist.EnPassantAFile + b.enPassantTarget.File())
 }
 
 func (b *board) whitePieces() BitBoard {
@@ -273,7 +273,7 @@ func (b *board) hashFull() {
 	}
 
 	if b.enPassantTarget != 0 {
-		b.HashKey = b.HashKey.Update(zobrist.EnPassantAFile + b.enPassantTarget.file())
+		b.HashKey = b.HashKey.Update(zobrist.EnPassantAFile + b.enPassantTarget.File())
 	}
 
 	if b.PlayerInTurn == Black {

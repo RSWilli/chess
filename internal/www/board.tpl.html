@@ -8,25 +8,26 @@
     {{ range $i, $rank := ranks }}
     <span>{{ $rank }}</span>
     {{ range $j, $file := files }}
-    {{- $canMoveFrom := $.CanMoveFrom $j $i }}
-    {{- $move := $.RegularMoveTo $j $i }}
-    {{- $promotionMoves := $.PromotionMovesTo $j $i }}
-    {{ $pieceAt := $.PieceAt $j $i }}
+    {{- $square := printf "%s%s" $file $rank }}
+    {{- $canMoveFrom := $.CanMoveFrom $square }}
+    {{- $move := $.RegularMoveTo $square }}
+    {{- $promotionMoves := $.PromotionMovesTo $square }}
+    {{ $pieceAt := $.PieceAt $square }}
     {{ if $canMoveFrom }}
-        <a href="/?square={{ $file }}{{ $rank }}" class="tile {{ $.ClassesFor $j $i }}" data-square="{{ $file }}{{ $rank }}">
+        <a href="/?square={{$square}}" class="tile {{ $.ClassesFor $square }}" data-square="$square">
             {{ if $pieceAt}}
             <img class="piece" src="{{ $pieceAt }}" draggable="false">
             {{ end }}
         </a>
     {{ else if $move }}
-        <button type="submit" class="tile {{ $.ClassesFor $j $i }}" data-square="{{ $file }}{{ $rank }}" formaction="/move/{{ $move }}">
+        <button type="submit" class="tile {{ $.ClassesFor $square }}" data-square="$square" formaction="/move/{{ $move }}">
             {{ if $pieceAt}}
             <img class="piece" src="{{ $pieceAt }}" draggable="false">
             {{ end }}
         </button>
     {{ else if len $promotionMoves }}
         <details class="promotiontile" name="promotions">
-            <summary class="tile {{ $.ClassesFor $j $i }}" data-square="{{ $file }}{{ $rank }}">
+            <summary class="tile {{ $.ClassesFor $square }}" data-square="$square">
                 {{ if $pieceAt}}
                 <img class="piece" src="{{ $pieceAt }}" draggable="false">
                 {{ end }}
@@ -39,12 +40,18 @@
                 {{ end }}
             </div>
         </details>
-    {{ else }}
-        <button type="submit" class="tile {{ $.ClassesFor $j $i }}" data-square="{{ $file }}{{ $rank }}" disabled>
+    {{ else if $.Selected }}
+        <a href="/" class="tile {{ $.ClassesFor $square }}" data-square="$square">
             {{ if $pieceAt}}
             <img class="piece" src="{{ $pieceAt }}" draggable="false">
             {{ end }}
-        </button>
+        </a>
+    {{ else }}
+        <div class="tile {{ $.ClassesFor $square }}" data-square="$square">
+            {{ if $pieceAt}}
+            <img class="piece" src="{{ $pieceAt }}" draggable="false">
+            {{ end }}
+        </div>
     {{ end }}
     {{ end }}
     <span>{{ $rank }}</span>

@@ -143,7 +143,7 @@ func NewPositionFromFEN(fen string, moves []string) (*Position, error) {
 			return nil, fmt.Errorf("%w: failed to parse en passant target square %w", ErrMalformedFEN, err)
 		}
 
-		if tile.rank()+1 != 3 && tile.rank()+1 != 6 {
+		if tile.Rank()+1 != 3 && tile.Rank()+1 != 6 {
 			return nil, fmt.Errorf("%w: en passant target square must be either rank 3 or 6", ErrMalformedFEN)
 		}
 

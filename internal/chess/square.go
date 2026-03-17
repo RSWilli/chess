@@ -21,14 +21,14 @@ func (t Square) index() int {
 	return bits.Len64(uint64(t)) - 1
 }
 
-// rank returns the index of the rank of the square from 8 to 1
-func (t Square) rank() int {
+// Rank returns the index of the Rank of the square from 8 to 1
+func (t Square) Rank() int {
 	i := t.index()
 	return int(uint64(i) / 8)
 }
 
-// file returns the index of the file of the square from a to h
-func (t Square) file() int {
+// File returns the index of the File of the square from a to h
+func (t Square) File() int {
 	i := t.index()
 	return int(uint64(i) % 8)
 }
@@ -42,8 +42,8 @@ func (t Square) String() string {
 		return "invalid square"
 	}
 
-	file := t.file()
-	rank := t.rank()
+	file := t.File()
+	rank := t.Rank()
 	return files[file:file+1] + ranks[rank:rank+1]
 }
 
