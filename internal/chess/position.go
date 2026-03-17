@@ -2,16 +2,21 @@ package chess
 
 import (
 	"fmt"
-
-	"github.com/rswilli/chess/internal/zobrist"
+	"slices"
 )
 
 // Position represents a state of a chess game. This can be used by engines to traverse the game tree.
+// It contains the informations needed for efficiently generating moves
 type Position struct {
 	_ [0]func() // equal guard
 
 	board
 
+	// HalveMoveClock gets incremented after each move that doesn't capture or move a pawn.
+	// max 100, see https://www.chessprogramming.org/Fifty-move_Rule
+	HalfmoveClock uint8
+
+	// Moves gets incremented every time black played a move
 	Moves int
 
 	// history contains the previous positions in a stack, useful for [Position.UndoMove]
@@ -26,7 +31,11 @@ type Position struct {
 
 	// xRayKingAttacks contains all lines of attacks that could create a check when a piece moves.
 	// this is needed to detect pinned pieces
-	xRayKingAttacks [8]attackRay
+	xRayKingAttacks []attackRay
+
+	slidingPieceCheckSquares BitBoard
+	knightCheckSquares       BitBoard
+	pawnCheckSquares         BitBoard
 }
 
 func NewPosition() *Position {
@@ -46,130 +55,17 @@ func (p *Position) DoMove(m Move) {
 	// will be reset later if applicable
 	p.HalfmoveClock++
 
-	if m.Special.Has(CastleLong | CastleShort) {
-		// Castling move:
-		if p.PlayerInTurn == White && m.Special == CastleShort {
-			p.unset(e1)
-			p.unset(h1)
+	p.board.DoMove(m)
 
-			p.set(whiteCastleKingKingTarget, WhiteKing)
-			p.set(whiteCastleKingRookTarget, WhiteRook)
-
-			p.removeCastling(CastleWhiteKing)
-			p.removeCastling(CastleWhiteQueen)
-		}
-		if p.PlayerInTurn == White && m.Special == CastleLong {
-			p.unset(e1)
-			p.unset(a1)
-
-			p.set(whiteCastleQueenKingTarget, WhiteKing)
-			p.set(whiteCastleQueenRookTarget, WhiteRook)
-
-			p.removeCastling(CastleWhiteKing)
-			p.removeCastling(CastleWhiteQueen)
-		}
-		if p.PlayerInTurn == Black && m.Special == CastleShort {
-			p.unset(e8)
-			p.unset(h8)
-
-			p.set(blackCastleKingKingTarget, BlackKing)
-			p.set(blackCastleKingRookTarget, BlackRook)
-
-			p.removeCastling(CastleBlackKing)
-			p.removeCastling(CastleBlackQueen)
-		}
-		if p.PlayerInTurn == Black && m.Special == CastleLong {
-			p.unset(e8)
-			p.unset(a8)
-
-			p.set(blackCastleQueenKingTarget, BlackKing)
-			p.set(blackCastleQueenRookTarget, BlackRook)
-
-			p.removeCastling(CastleBlackKing)
-			p.removeCastling(CastleBlackQueen)
-		}
-
-		p.clearEnpassant()
-	} else {
-		piece := p.Square(m.From)
-
-		if piece == Pawn || m.Special.Has(Captures) {
-			// 50 Move rule
-			p.HalfmoveClock = 0
-		}
-
-		// clear the old square
-		p.unset(m.From)
-		p.unset(m.To)
-
-		switch {
-		case m.Special.Has(PromoteQueen):
-			piece = Queen | p.PlayerInTurn
-		case m.Special.Has(PromoteRook):
-			piece = Rook | p.PlayerInTurn
-		case m.Special.Has(PromoteKnight):
-			piece = Knight | p.PlayerInTurn
-		case m.Special.Has(PromoteBishop):
-			piece = Bishop | p.PlayerInTurn
-		}
-
-		// remove the en-passant captured pawn, no need to check for the piece type since the en passant
-		// square is always empty, so no other move can capture on it
-		if m.Special.Has(Captures) && m.To == p.enPassantTarget && p.PlayerInTurn == White {
-			p.unset(Square(BitBoard(m.To).Down()))
-		} else if m.Special.Has(Captures) && m.To == p.enPassantTarget && p.PlayerInTurn == Black {
-			p.unset(Square(BitBoard(m.To).Up()))
-		}
-
-		// save the en passant square for the move generation of the en passant moves
-		if m.Special.Has(DoublePawnPush) && p.PlayerInTurn == White {
-			p.setEnpassant(Square(BitBoard(m.From).Up()))
-		} else if m.Special.Has(DoublePawnPush) && p.PlayerInTurn == Black {
-			p.setEnpassant(Square(BitBoard(m.From).Down()))
-		} else {
-			p.clearEnpassant()
-		}
-
-		// prevent castling moves, but only if set because the hash update depends on it:
-		if p.castling.Has(CastleWhiteQueen) && (m.From == a1 || m.From == e1 || m.To == a1) {
-			p.removeCastling(CastleWhiteQueen)
-		}
-
-		if p.castling.Has(CastleWhiteKing) && (m.From == h1 || m.From == e1 || m.To == h1) {
-			p.removeCastling(CastleWhiteKing)
-		}
-
-		if p.castling.Has(CastleBlackQueen) && (m.From == a8 || m.From == e8 || m.To == a8) {
-			p.removeCastling(CastleBlackQueen)
-		}
-
-		if p.castling.Has(CastleBlackKing) && (m.From == h8 || m.From == e8 || m.To == h8) {
-			p.removeCastling(CastleBlackKing)
-		}
-
-		p.set(m.To, piece)
+	if !m.Special.Has(CastleLong|CastleShort) && (p.Square(m.From) == Pawn || m.Special.Has(Captures)) {
+		// 50 Move rule
+		p.HalfmoveClock = 0
 	}
-
-	// FIXME: the wiki says that losing castling increments the halfmove clock
-	// // halfmove clock for 50 move rule, see https://www.chessprogramming.org/Halfmove_Clock
-	// previousCastling := p.history[len(p.history)-1].castling
-	// nowCastling := p.castling
-
-	// lostCastling := previousCastling != nowCastling
 
 	if p.PlayerInTurn == Black {
 		// Fullmove counter only increments after black played
 		p.Moves++
 	}
-
-	// Move done, reset state and recalculate:
-	if p.PlayerInTurn == White {
-		p.PlayerInTurn = Black
-	} else {
-		p.PlayerInTurn = White
-	}
-
-	p.HashKey = p.HashKey.Update(zobrist.SwitchSide)
 
 	// TODO: do this more cleverly, e.g. incrementally update
 	p.computeAll()
@@ -178,7 +74,7 @@ func (p *Position) DoMove(m Move) {
 func (p *Position) reset() {
 	p.attacksFrom = squareLookup[BitBoard]{}
 	p.attacksTo = squareLookup[BitBoard]{}
-	p.xRayKingAttacks = [8]attackRay{}
+	p.xRayKingAttacks = slices.Grow(p.xRayKingAttacks[0:0], 8)
 }
 
 func (p *Position) computeAll() {
@@ -228,7 +124,7 @@ func (p *Position) computeAll() {
 }
 
 func (p *Position) UndoMove() {
-	if p.Moves == 0 || len(p.history) == 0 {
+	if len(p.history) == 0 {
 		// this is a programming error, so we panic here
 		panic("cannot undo move, none was done")
 	}
@@ -311,9 +207,6 @@ func (p *Position) IsDraw() bool {
 
 func (p *Position) Copy() *Position {
 	c := *p
-
-	historyCopy := make([]board, len(c.history))
-	copy(historyCopy, c.history)
 
 	return &c
 }

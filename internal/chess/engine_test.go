@@ -13,9 +13,22 @@ import (
 func BenchmarkPerft(t *testing.B) {
 	local := chess.NewEngine()
 
+	total := 0
 	for t.Loop() {
-		local.Perft(5)
+		for _, fen := range chesstest.Suites {
+			local.Position(fen, nil)
+
+			visited, _, err := local.Perft(5)
+
+			if err != nil {
+				t.Fatalf("perft ran into an error: %v", err)
+			}
+
+			total += visited
+		}
 	}
+
+	t.Logf("visited %d positions in total", total)
 }
 
 func TestPerft(t *testing.T) {

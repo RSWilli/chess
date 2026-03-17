@@ -23,6 +23,8 @@ func init() {
 
 func RunAll(t *testing.T, f func(t *testing.T, fen string)) {
 	for _, fen := range Suites {
+		t.Logf("%s for %s running\n", t.Name(), fen)
+
 		success := t.Run(fen, func(t *testing.T) {
 			f(t, fen)
 		})

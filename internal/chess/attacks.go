@@ -6,38 +6,46 @@ func calculateAttackMaps(all, king, queens, rooks, bishops, knights, pawns BitBo
 	same := BitBoard(0)
 	opposing := all
 
+	// storeAttacks stores all attacked targets in the attackFrom and inverts them for the attacksTo
+	storeAttacks := func(from, targets BitBoard) {
+		attacksFrom.set(king, targets)
+
+		for to := range targets.Ones() {
+			attacksTo.set(to, attacksTo.get(to)|from)
+		}
+	}
+
 	if opponentPlayer == White {
 		pawns.Each(func(b BitBoard) {
-			attacksFrom.set(b, whitePawnAttacks(b))
+			storeAttacks(b, whitePawnAttacks(b))
 		})
 	} else {
 		pawns.Each(func(b BitBoard) {
-			attacksFrom.set(b, blackPawnAttacks(b))
+			storeAttacks(b, blackPawnAttacks(b))
 		})
 	}
 	knights.Each(func(b BitBoard) {
-		attacksFrom.set(b, knightMoves(b))
+		storeAttacks(b, knightMoves(b, same, opposing))
 	})
 	bishops.Each(func(b BitBoard) {
-		attacksFrom.set(b, bishopMoves(b, same, opposing))
+		storeAttacks(b, bishopMoves(b, same, opposing))
 	})
 	rooks.Each(func(b BitBoard) {
-		attacksFrom.set(b, rookMoves(b, same, opposing))
+		storeAttacks(b, rookMoves(b, same, opposing))
 	})
 	queens.Each(func(b BitBoard) {
-		attacksFrom.set(b, queenMoves(b, same, opposing))
+		storeAttacks(b, queenMoves(b, same, opposing))
 	})
 
-	attacksFrom.set(king, kingMoves(king))
+	storeAttacks(king, kingMoves(king))
 
-	return transpose(attacksFrom), attacksFrom
+	return attacksTo, attacksFrom
 }
 
 // calculateSlidingKingAttacks returns a list of Bitboards that contain 1s everywhere that a piece must stand
 // to prevent a check from a sliding piece. This is needed to detect pinned pieces as well as force blocking
 // a check.
 func (p *Position) calculateSlidingKingAttacks(king, opponentQueens, opponentRooks, opponentBishops BitBoard) {
-	currentRay := 0
 
 	// we simulate the king as a queen, and check the rays individually for the correct pieces
 	// for that we don't use any of our pieces and join all sliders. If we hit a slider and the slider can move in
@@ -70,12 +78,10 @@ func (p *Position) calculateSlidingKingAttacks(king, opponentQueens, opponentRoo
 
 		pinRay := ray &^ piece
 
-		p.xRayKingAttacks[currentRay] = attackRay{
+		p.xRayKingAttacks = append(p.xRayKingAttacks, attackRay{
 			from: piece,
 			ray:  pinRay,
-		}
-
-		currentRay++
+		})
 	}
 
 	opponentOrthoSliders := opponentRooks | opponentQueens

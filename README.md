@@ -13,7 +13,19 @@ git revision.
 
 ## Tests
 
-Chess rules are tested against [stockfish](https://stockfishchess.org/)
+Chess rules are tested against [stockfish](https://stockfishchess.org/) and can be verified using the engine perft test
+
+```bash
+go test ./internal/chess -v -run=^TestPerft
+```
+
+## Performance
+
+Benchmark the perft command:
+
+```bash
+go test ./internal/chess -run=^$ -v -bench=BenchmarkPerft -cpuprofile=profile.prof
+```
 
 ## Attributions
 

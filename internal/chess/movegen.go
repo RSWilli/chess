@@ -272,84 +272,33 @@ func (p *Position) generateKingMoves(bb BitBoard, legalMoves *[]Move) {
 }
 
 func (p *Position) generateKnightMoves(knight BitBoard, legalMoves *[]Move) {
-	for t := range knightMoves(knight).Ones() {
-		if t == 0 {
-			// wrapped around
-			continue
-		}
-
-		if t&p.ours() != 0 {
-			// occupied
-			continue
-		}
-
-		s := NoSpecial
-		taken := Empty
-
-		if t&p.theirs() != 0 {
-			s |= Captures
-			taken = p.Square(Square(t))
-		}
-
-		m := Move{
-			From:    Square(knight),
-			To:      Square(t),
-			Special: s,
-			Takes:   taken,
-		}
-
-		if !p.isLegalMove(m) {
-			continue
-		}
-
-		*legalMoves = append(*legalMoves, m)
-	}
+	p.generatePieceMoves(knightMoves, knight, legalMoves)
 }
 
 func (p *Position) generateRookMoves(rook BitBoard, legalMoves *[]Move) {
-	targets := rookMoves(rook, p.ours(), p.theirs())
-
-	for t := range targets.Ones() {
-		s := NoSpecial
-		taken := Empty
-
-		if t&p.theirs() != 0 {
-			s |= Captures
-			taken = p.Square(Square(t))
-		}
-
-		m := Move{
-			From:    Square(rook),
-			To:      Square(t),
-			Special: s,
-			Takes:   taken,
-		}
-
-		if !p.isLegalMove(m) {
-			continue
-		}
-
-		*legalMoves = append(*legalMoves, m)
-	}
+	p.generatePieceMoves(rookMoves, rook, legalMoves)
 }
 
 func (p *Position) generateQueenMoves(queen BitBoard, legalMoves *[]Move) {
-	targets := queenMoves(queen, p.ours(), p.theirs())
+	p.generatePieceMoves(queenMoves, queen, legalMoves)
+}
 
-	for t := range targets.Ones() {
-		s := NoSpecial
-		taken := Empty
+func (p *Position) generateBishopMoves(bishop BitBoard, legalMoves *[]Move) {
+	p.generatePieceMoves(bishopMoves, bishop, legalMoves)
+}
 
-		if t&p.theirs() != 0 {
-			s |= Captures
-			taken = p.Square(Square(t))
-		}
+func (p *Position) generatePieceMoves(moveMaker func(sq BitBoard, same BitBoard, opposing BitBoard) BitBoard, piece BitBoard, legalMoves *[]Move) {
+	theirs := p.theirs()
 
+	targets := moveMaker(piece, p.ours(), theirs)
+
+	capturing := targets & theirs
+	noncapturing := targets &^ theirs
+
+	for t := range noncapturing.Ones() {
 		m := Move{
-			From:    Square(queen),
-			To:      Square(t),
-			Special: s,
-			Takes:   taken,
+			From: Square(piece),
+			To:   Square(t),
 		}
 
 		if !p.isLegalMove(m) {
@@ -358,25 +307,13 @@ func (p *Position) generateQueenMoves(queen BitBoard, legalMoves *[]Move) {
 
 		*legalMoves = append(*legalMoves, m)
 	}
-}
 
-func (p *Position) generateBishopMoves(bishop BitBoard, legalMoves *[]Move) {
-	targets := bishopMoves(bishop, p.ours(), p.theirs())
-
-	for t := range targets.Ones() {
-		s := NoSpecial
-		taken := Empty
-
-		if t&p.theirs() != 0 {
-			s |= Captures
-			taken = p.Square(Square(t))
-		}
-
+	for t := range capturing.Ones() {
 		m := Move{
-			From:    Square(bishop),
+			From:    Square(piece),
 			To:      Square(t),
-			Special: s,
-			Takes:   taken,
+			Special: Captures,
+			Takes:   p.Square(Square(t)),
 		}
 
 		if !p.isLegalMove(m) {

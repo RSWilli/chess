@@ -1,2 +1,6 @@
 .direnv
 __debug*
+# go test binary:
+*.test
+# pprof profile:
+*.prof

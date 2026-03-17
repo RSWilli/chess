@@ -11,8 +11,8 @@ func kingMoves(king BitBoard) BitBoard {
 		king.Right()
 }
 
-func knightMoves(knight BitBoard) BitBoard {
-	return knight.Up().Up().Left() |
+func knightMoves(knight BitBoard, same, _ BitBoard) BitBoard {
+	targets := knight.Up().Up().Left() |
 		knight.Up().Up().Right() |
 
 		knight.Down().Down().Left() |
@@ -23,6 +23,8 @@ func knightMoves(knight BitBoard) BitBoard {
 
 		knight.Down().Left().Left() |
 		knight.Down().Right().Right()
+
+	return targets &^ same
 }
 
 func rookMoves(sq, same, opposing BitBoard) BitBoard {

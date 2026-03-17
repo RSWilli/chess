@@ -31,12 +31,8 @@ func (b BitBoard) String() string {
 }
 
 func (b BitBoard) Each(f func(b BitBoard)) {
-	for i := range BitBoard(64) {
-		if b&(1<<i) == 0 {
-			continue
-		}
-
-		f(1 << i)
+	for bb := range b.Ones() {
+		f(bb)
 	}
 }
 

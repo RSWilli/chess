@@ -16,12 +16,3 @@ func (s *squareLookup[V]) get(b BitBoard) V {
 func (s *squareLookup[V]) set(b BitBoard, value V) {
 	s.store[bits.Len64(uint64(b))-1] = value
 }
-
-func transpose(s squareLookup[BitBoard]) (transposed squareLookup[BitBoard]) {
-	for i, squares := range s.store {
-		for sq := range squares.Ones() {
-			transposed.set(sq, transposed.get(sq)|1<<i)
-		}
-	}
-	return
-}

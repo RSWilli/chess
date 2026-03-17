@@ -29,9 +29,9 @@ func init() {
 		{BitBoard.Right, &eastRays},
 		{BitBoard.DiagDown, &southEastRays},
 		{BitBoard.Down, &southRays},
-		{BitBoard.AntiDiagDown, &northWestRays},
+		{BitBoard.AntiDiagUp, &northWestRays},
 		{BitBoard.Left, &westRays},
-		{BitBoard.AntiDiagUp, &southWestRays},
+		{BitBoard.AntiDiagDown, &southWestRays},
 	}
 
 	// generate rays in all queen move directions for each square
