@@ -1,6 +1,12 @@
-# Chess Server and engine
+# Chess
 
-Just me trying to implement a chess server and chess engine.
+Just me trying to implement a chess server and chess engine that will hopefully some day beat me at chess.
+
+## Applications in this Repository
+
+* `cmd/battle`: A commandline utility to battle the current engine against a UCI engine from a path (or against [stockfish](https://stockfishchess.org/)).
+* `cmd/engine`: A commandline program that implements the UCI protocol so the chess engine can be used with other GUIs.
+* `cmd/server`: a web server that serves a GUI where you can play chess, with human player support.
 
 ## Engines built
 

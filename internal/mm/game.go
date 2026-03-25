@@ -119,3 +119,21 @@ func NewGame(white, black uci.Engine) *Game {
 		black:    black,
 	}
 }
+
+func NewGameWithFEN(fen string, white, black uci.Engine) (*Game, error) {
+	black.NewGame()
+	white.NewGame()
+
+	pos, err := chess.NewPositionFromFEN(fen, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &Game{
+		Position: pos,
+		current:  playerWhite,
+		white:    white,
+		black:    black,
+	}, nil
+}

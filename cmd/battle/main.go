@@ -1,0 +1,106 @@
+package main
+
+import (
+	_ "embed"
+	"flag"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/rswilli/chess/internal/chess"
+	"github.com/rswilli/chess/internal/mm"
+	"github.com/rswilli/chess/internal/uci"
+)
+
+//go:embed positions.txt
+var positionsList string
+var positions = strings.Split(positionsList, "\n")
+
+var opponentPath = flag.String("opponent", "", "the opponent to play against, aka path to the engine binary or 'stockfish'")
+
+func main() {
+	flag.Parse()
+
+	if *opponentPath == "" {
+		fmt.Fprintln(os.Stderr, "no opponent given")
+		flag.Usage()
+		os.Exit(2)
+	}
+
+	var opponent uci.Engine
+	var err error
+
+	if *opponentPath == "stockfish" {
+		opponent, err = uci.NewStockfish()
+	} else {
+		opponent, err = uci.NewClient(*opponentPath)
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not create opponent: %v\n", err)
+		flag.Usage()
+		os.Exit(2)
+	}
+
+	local := chess.NewEngine()
+
+	var stats stats
+
+	for _, fen := range positions {
+		fmt.Printf("running game %s\n", fen)
+		stats.update(runGame(fen, local, opponent), whiteWin)
+		fmt.Printf("running game rematch %s\n", fen)
+		stats.update(runGame(fen, opponent, local), blackWin)
+	}
+
+	fmt.Printf("against %s won %d, lost %d, draws %d\n", *opponentPath, stats.wins, stats.losses, stats.draws)
+}
+
+type result int
+
+const (
+	draw result = iota
+	whiteWin
+	blackWin
+)
+
+type stats struct {
+	wins   int
+	draws  int
+	losses int
+}
+
+func (s *stats) update(result, expected result) {
+	switch result {
+	case expected:
+		s.wins++
+		fmt.Println("won")
+	case draw:
+		s.draws++
+		fmt.Println("draw")
+	default:
+		s.losses++
+		fmt.Println("lost")
+	}
+}
+
+func runGame(fen string, white, black uci.Engine) result {
+	game, _ := mm.NewGameWithFEN(fen, white, black)
+
+	for {
+		game.Move()
+
+		if game.Position.IsDraw() {
+			return draw
+		}
+
+		if game.Position.IsCheckMate() {
+			switch game.Position.PlayerInTurn {
+			case chess.Black:
+				return whiteWin
+			case chess.White:
+				return blackWin
+			}
+		}
+	}
+}

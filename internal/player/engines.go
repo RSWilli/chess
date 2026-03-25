@@ -10,16 +10,34 @@ import (
 	"github.com/rswilli/chess/internal/uci"
 )
 
-const enginesSubFolder = "engines"
+func NewEnginesRegistry(folder string) (EnginesRegistry, error) {
+	fi, err := os.Stat(folder)
 
-func AvailableEngines() ([]string, error) {
+	if err != nil {
+		return EnginesRegistry{}, err
+	}
+
+	if !fi.IsDir() {
+		return EnginesRegistry{}, err
+	}
+
+	return EnginesRegistry{
+		enginesFolder: folder,
+	}, nil
+}
+
+type EnginesRegistry struct {
+	enginesFolder string
+}
+
+func (r EnginesRegistry) AvailableEngines() ([]string, error) {
 	cwd, err := os.Getwd()
 
 	if err != nil {
 		return nil, fmt.Errorf("could not get cwd: %w", err)
 	}
 
-	entries, err := os.ReadDir(filepath.Join(cwd, enginesSubFolder))
+	entries, err := os.ReadDir(filepath.Join(cwd, r.enginesFolder))
 
 	if err != nil {
 		return nil, fmt.Errorf("could not read engines folder: %w", err)
@@ -44,7 +62,7 @@ const EngineStockfish = "stockfish"
 const EngineHuman = "human"
 const EngineLocal = "local"
 
-func NewEngine(name string) (uci.Engine, error) {
+func (r EnginesRegistry) NewEngine(name string) (uci.Engine, error) {
 	switch name {
 	case EngineLocal:
 		return chess.NewEngine(), nil
@@ -60,5 +78,5 @@ func NewEngine(name string) (uci.Engine, error) {
 		return nil, fmt.Errorf("could not get cwd: %w", err)
 	}
 
-	return uci.NewClient(filepath.Join(cwd, enginesSubFolder, name))
+	return uci.NewClient(filepath.Join(cwd, r.enginesFolder, name))
 }

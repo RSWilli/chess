@@ -20,6 +20,8 @@ type Handler struct {
 
 	eventid int
 
+	engines player.EnginesRegistry
+
 	broker *notify.Broker[sse.Event]
 
 	// gamecond is used to notify the game loop about game changes
@@ -28,11 +30,12 @@ type Handler struct {
 	game *mm.Game
 }
 
-func NewHandler() *Handler {
+func NewHandler(r player.EnginesRegistry) *Handler {
 	mux := http.NewServeMux()
 
 	h := &Handler{
 		Handler: mux,
+		engines: r,
 		broker:  notify.NewBroker[sse.Event](),
 	}
 	h.gamecond = sync.NewCond(&h.lock)
@@ -161,14 +164,14 @@ func (h *Handler) handleNewGame(w http.ResponseWriter, r *http.Request) {
 	white := r.FormValue("white")
 	black := r.FormValue("black")
 
-	whitePlayer, err := player.NewEngine(white)
+	whitePlayer, err := h.engines.NewEngine(white)
 
 	if err != nil {
 		http.Error(w, "invalid white player", http.StatusBadRequest)
 		return
 	}
 
-	blackPlayer, err := player.NewEngine(black)
+	blackPlayer, err := h.engines.NewEngine(black)
 
 	if err != nil {
 		http.Error(w, "invalid black player", http.StatusBadRequest)
@@ -242,7 +245,7 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) renderIndex(w http.ResponseWriter, data www.BoardData) {
-	engines, err := player.AvailableEngines()
+	engines, err := h.engines.AvailableEngines()
 
 	if err != nil {
 		slog.Error("could not get engines", "error", err)
