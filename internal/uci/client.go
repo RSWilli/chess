@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rswilli/chess/internal/search"
+	"github.com/rswilli/chess/internal/uci/search"
 )
 
 // Client talks to an engine via two streams in the uci protocol

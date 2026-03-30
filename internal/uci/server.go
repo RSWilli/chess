@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/rswilli/chess/internal/chess"
-	"github.com/rswilli/chess/internal/search"
+	"github.com/rswilli/chess/internal/uci/search"
 )
 
 // Engine is a chess engine that responds to the UCI commands.

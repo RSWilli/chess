@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"github.com/rswilli/chess/internal/chess"
-	"github.com/rswilli/chess/internal/search"
 	"github.com/rswilli/chess/internal/uci"
+	"github.com/rswilli/chess/internal/uci/search"
 )
 
 // Human is an uci.Engine implementation that exposes additional methods that wait for user input

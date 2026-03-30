@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/rswilli/chess/internal/chess"
-	"github.com/rswilli/chess/internal/search"
 	"github.com/rswilli/chess/internal/uci"
+	"github.com/rswilli/chess/internal/uci/search"
 )
 
 type player string
