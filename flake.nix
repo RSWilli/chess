@@ -20,6 +20,13 @@
       pkgs.mkShell {
         packages = with pkgs; [
           go_latest
+          go-tools
+
+          gopls
+          delve
+          impl
+          gotest
+
           graphviz # for pprof
           stockfish
           rlwrap # for terminal command history inside stockfish
