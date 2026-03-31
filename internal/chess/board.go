@@ -313,13 +313,6 @@ func (b *board) blackPieces() BitBoard {
 		b.blackKing
 }
 
-var a1 = MustParseSquare("a1")
-var e1 = MustParseSquare("e1")
-var a8 = MustParseSquare("a8")
-var h1 = MustParseSquare("h1")
-var e8 = MustParseSquare("e8")
-var h8 = MustParseSquare("h8")
-
 // ours returns the pieces of the current player
 func (b *board) ours() BitBoard {
 	if b.PlayerInTurn == White {

@@ -15,6 +15,8 @@ const (
 	NoSpecial MoveSpecial = 0
 
 	Captures MoveSpecial = 1 << (iota - 1)
+	Check
+
 	DoublePawnPush
 	EnPassant
 

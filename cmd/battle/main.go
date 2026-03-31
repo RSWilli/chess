@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/rswilli/chess/internal/chess"
 	"github.com/rswilli/chess/internal/mm"
@@ -16,6 +17,7 @@ import (
 var positionsList string
 var positions = strings.Split(positionsList, "\n")
 
+var rounds = flag.Int("n", 10, "the amount of rounds to play")
 var opponentPath = flag.String("opponent", "", "the opponent to play against, aka path to the engine binary or 'stockfish'")
 
 func main() {
@@ -46,14 +48,20 @@ func main() {
 
 	var stats stats
 
-	for _, fen := range positions {
-		fmt.Printf("running game %s\n", fen)
-		stats.update(runGame(fen, local, opponent), whiteWin)
-		fmt.Printf("running game rematch %s\n", fen)
-		stats.update(runGame(fen, opponent, local), blackWin)
+	start := time.Now()
+
+	for round := range *rounds {
+		fmt.Printf("starting round %d\n", round+1)
+		for _, fen := range positions {
+			fmt.Printf("running game %s\n", fen)
+			stats.update(runGame(fen, local, opponent), whiteWin)
+			fmt.Printf("running game rematch %s\n", fen)
+			stats.update(runGame(fen, opponent, local), blackWin)
+		}
 	}
 
-	fmt.Printf("against %s won %d, lost %d, draws %d\n", *opponentPath, stats.wins, stats.losses, stats.draws)
+	fmt.Printf("against %s:\nTotal: %d\n won %d, lost %d, draws %d\n", *opponentPath, stats.total(), stats.wins, stats.losses, stats.draws)
+	fmt.Printf("Took: %s", time.Since(start).String())
 }
 
 type result int
@@ -68,6 +76,10 @@ type stats struct {
 	wins   int
 	draws  int
 	losses int
+}
+
+func (s stats) total() int {
+	return s.wins + s.draws + s.losses
 }
 
 func (s *stats) update(result, expected result) {

@@ -2,11 +2,10 @@ package chess
 
 import (
 	"fmt"
-	"math/rand/v2"
+	"slices"
 	"sync"
-	"time"
 
-	"github.com/rswilli/chess/internal/search"
+	"github.com/rswilli/chess/internal/uci/search"
 )
 
 type Engine struct {
@@ -142,13 +141,9 @@ func (e *Engine) search() string {
 		return ""
 	}
 
-	i := rand.IntN(len(moves))
+	slices.SortFunc(moves, e.compareMoves)
 
-	time.Sleep(250 * time.Millisecond)
-
-	e.searching = false
-
-	return moves[i].String()
+	return moves[0].String()
 }
 
 // Stop implements uci.Engine.
@@ -158,4 +153,34 @@ func (e *Engine) Stop() {
 
 	e.searching = false
 	e.currentSearchOpts = nil
+}
+
+// compareMoves is used as a sort function on the list of generated moves
+//
+// better moves are sorted before worse ones so the search will look at them first
+func (e *Engine) compareMoves(a, b Move) int {
+	const (
+		better = -1
+		equal  = 0
+		worse  = 1
+	)
+
+	switch {
+	case a.Special.Has(Check) && !b.Special.Has(Check):
+		return better
+	case !a.Special.Has(Check) && b.Special.Has(Check):
+		return worse
+	case a.Special.Has(Captures) && !b.Special.Has(Captures):
+		return better
+	case !a.Special.Has(Captures) && b.Special.Has(Captures):
+		return better
+	case a.Special.Has(Captures) && b.Special.Has(Captures):
+		if a.Takes > b.Takes {
+			return better
+		} else if a.Takes < b.Takes {
+			return worse
+		}
+	}
+
+	return equal
 }

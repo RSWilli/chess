@@ -10,20 +10,25 @@ Just me trying to implement a chess server and chess engine that will hopefully 
 
 ## Engines built
 
-All built engines are tagged and measured against the next version.
+All built engines are tagged and measured against the next version. A new engine is tagged
+once the `cmd/battle` application concluded that it is significantly better than the previous one.
+Tested scores are given per engine.
 
-1. `randotron`: A chess engine only playing random moves.
+1. `randotron`: The most basic chess engine, only playing random moves.
+2. `comparator`: An engine with basic move ordering, favoring captures and checks over random moves. (W: 10, L: 0, D: 11)
 
 Using the [`compile_engines.sh`](./compile_engines.sh) script you can compile all engine versions from any
 git revision.
 
 ## Tests
 
-Chess rules are tested against [stockfish](https://stockfishchess.org/) and can be verified using the engine perft test
+Chess rules are tested against [stockfish](https://stockfishchess.org/) and can be verified using the engine perft test:
 
 ```bash
-go test ./internal/chess -v -run=^TestPerft
+go test ./internal/chess -v -run=^TestPerft -timeout 0
 ```
+
+The test can take a while depending on the hardware so disabling the timeout is recommended.
 
 ## Performance
 

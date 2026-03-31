@@ -99,3 +99,19 @@ func (p *Position) calculateSlidingKingAttacks(king, opponentQueens, opponentRoo
 		}
 	}
 }
+
+// calculateCheckSquares computes the squares that would check the opponent. Useful for marking a move
+// as a checking move, which is useful for move ordering in the engine.
+func (p *Position) calculateCheckSquares(opponentKing, ours, theirs BitBoard, currentPlayer Piece) {
+	// king as opponent pawn computes our pawn checking squares:
+	if currentPlayer == White {
+		p.pawnCheckSquares = blackPawnAttacks(opponentKing)
+	} else {
+		p.pawnCheckSquares = whitePawnAttacks(opponentKing)
+	}
+
+	p.knightCheckSquares = knightMoves(opponentKing, ours, theirs)
+
+	p.bishopCheckSquares = bishopMoves(opponentKing, ours, theirs)
+	p.rookCheckSquares = rookMoves(opponentKing, ours, theirs)
+}

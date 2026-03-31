@@ -53,6 +53,10 @@ func (p *Position) generatePawnMoves(from, pushed, doublePushed, doublePushRank,
 			Special: DoublePawnPush,
 		}
 
+		if p.pawnCheckSquares&BitBoard(m.To) != 0 {
+			m.Special |= Check
+		}
+
 		if p.isLegalMove(m) {
 			*legalMoves = append(*legalMoves, m)
 		}
@@ -69,6 +73,10 @@ func (p *Position) generatePawnMoves(from, pushed, doublePushed, doublePushRank,
 			From:    Square(from),
 			To:      Square(pushed),
 			Special: NoSpecial,
+		}
+
+		if p.pawnCheckSquares&BitBoard(m.To) != 0 {
+			m.Special |= Check
 		}
 
 		if p.isLegalMove(m) {
@@ -106,6 +114,10 @@ func (p *Position) generatePawnMoves(from, pushed, doublePushed, doublePushRank,
 			To:      Square(t),
 			Special: special,
 			Takes:   taken,
+		}
+
+		if p.pawnCheckSquares&BitBoard(m.To) != 0 {
+			m.Special |= Check
 		}
 
 		if p.isLegalMove(m) {
@@ -146,22 +158,22 @@ func (p *Position) generateBlackPawnMoves(bb BitBoard, legalMoves *[]Move) {
 }
 
 // bitboard to check when trying to castle
-var (
-	whiteCastleKing            = BitBoard(MustParseSquare("f1") | MustParseSquare("g1"))
-	whiteCastleKingKingTarget  = MustParseSquare("g1")
-	whiteCastleKingRookTarget  = MustParseSquare("f1")
-	whiteCastleQueenNoCheck    = BitBoard(MustParseSquare("c1") | MustParseSquare("d1"))
-	whiteCastleQueenEmpty      = BitBoard(MustParseSquare("b1") | MustParseSquare("c1") | MustParseSquare("d1"))
-	whiteCastleQueenKingTarget = MustParseSquare("c1")
-	whiteCastleQueenRookTarget = MustParseSquare("d1")
+const (
+	whiteCastleKing            = f1 | g1
+	whiteCastleKingKingTarget  = g1
+	whiteCastleKingRookTarget  = f1
+	whiteCastleQueenNoCheck    = c1 | d1
+	whiteCastleQueenEmpty      = b1 | whiteCastleQueenNoCheck
+	whiteCastleQueenKingTarget = c1
+	whiteCastleQueenRookTarget = d1
 
-	blackCastleQueenNoCheck    = BitBoard(MustParseSquare("c8") | MustParseSquare("d8"))
-	blackCastleQueenEmpty      = BitBoard(MustParseSquare("b8") | MustParseSquare("c8") | MustParseSquare("d8"))
-	blackCastleKingKingTarget  = MustParseSquare("g8")
-	blackCastleKingRookTarget  = MustParseSquare("f8")
-	blackCastleKing            = BitBoard(MustParseSquare("f8") | MustParseSquare("g8"))
-	blackCastleQueenKingTarget = MustParseSquare("c8")
-	blackCastleQueenRookTarget = MustParseSquare("d8")
+	blackCastleQueenNoCheck    = c8 | d8
+	blackCastleQueenEmpty      = b8 | blackCastleQueenNoCheck
+	blackCastleKingKingTarget  = g8
+	blackCastleKingRookTarget  = f8
+	blackCastleKing            = f8 | g8
+	blackCastleQueenKingTarget = c8
+	blackCastleQueenRookTarget = d8
 )
 
 // notAttacked returns true if none of the squares set in the given bitboard are attacked
@@ -272,22 +284,22 @@ func (p *Position) generateKingMoves(bb BitBoard, legalMoves *[]Move) {
 }
 
 func (p *Position) generateKnightMoves(knight BitBoard, legalMoves *[]Move) {
-	p.generatePieceMoves(knightMoves, knight, legalMoves)
+	p.generatePieceMoves(knightMoves, knight, p.knightCheckSquares, legalMoves)
 }
 
 func (p *Position) generateRookMoves(rook BitBoard, legalMoves *[]Move) {
-	p.generatePieceMoves(rookMoves, rook, legalMoves)
+	p.generatePieceMoves(rookMoves, rook, p.rookCheckSquares, legalMoves)
 }
 
 func (p *Position) generateQueenMoves(queen BitBoard, legalMoves *[]Move) {
-	p.generatePieceMoves(queenMoves, queen, legalMoves)
+	p.generatePieceMoves(queenMoves, queen, p.rookCheckSquares|p.bishopCheckSquares, legalMoves)
 }
 
 func (p *Position) generateBishopMoves(bishop BitBoard, legalMoves *[]Move) {
-	p.generatePieceMoves(bishopMoves, bishop, legalMoves)
+	p.generatePieceMoves(bishopMoves, bishop, p.bishopCheckSquares, legalMoves)
 }
 
-func (p *Position) generatePieceMoves(moveMaker func(sq BitBoard, same BitBoard, opposing BitBoard) BitBoard, piece BitBoard, legalMoves *[]Move) {
+func (p *Position) generatePieceMoves(moveMaker func(sq BitBoard, same BitBoard, opposing BitBoard) BitBoard, piece BitBoard, checkSquares BitBoard, legalMoves *[]Move) {
 	theirs := p.theirs()
 
 	targets := moveMaker(piece, p.ours(), theirs)
@@ -305,6 +317,10 @@ func (p *Position) generatePieceMoves(moveMaker func(sq BitBoard, same BitBoard,
 			continue
 		}
 
+		if checkSquares&BitBoard(m.To) != 0 {
+			m.Special |= Check
+		}
+
 		*legalMoves = append(*legalMoves, m)
 	}
 
@@ -318,6 +334,10 @@ func (p *Position) generatePieceMoves(moveMaker func(sq BitBoard, same BitBoard,
 
 		if !p.isLegalMove(m) {
 			continue
+		}
+
+		if checkSquares&BitBoard(m.To) != 0 {
+			m.Special |= Check
 		}
 
 		*legalMoves = append(*legalMoves, m)

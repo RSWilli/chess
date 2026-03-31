@@ -33,9 +33,11 @@ type Position struct {
 	// this is needed to detect pinned pieces
 	xRayKingAttacks []attackRay
 
-	slidingPieceCheckSquares BitBoard
-	knightCheckSquares       BitBoard
-	pawnCheckSquares         BitBoard
+	// Bitboards for testing for checks in the move generation.
+	bishopCheckSquares BitBoard
+	rookCheckSquares   BitBoard
+	knightCheckSquares BitBoard
+	pawnCheckSquares   BitBoard
 }
 
 func NewPosition() *Position {
@@ -100,6 +102,8 @@ func (p *Position) computeAll() {
 			p.whiteRooks,
 			p.whiteBishops,
 		)
+
+		p.calculateCheckSquares(p.whiteKing, p.whitePieces(), p.blackPieces(), p.PlayerInTurn)
 	} else {
 		p.attacksTo, p.attacksFrom = calculateAttackMaps(
 			// we need to exclude our king so that it wont count as blocking an
@@ -120,7 +124,10 @@ func (p *Position) computeAll() {
 			p.blackRooks,
 			p.blackBishops,
 		)
+
+		p.calculateCheckSquares(p.blackKing, p.blackPieces(), p.whitePieces(), p.PlayerInTurn)
 	}
+
 }
 
 func (p *Position) UndoMove() {
