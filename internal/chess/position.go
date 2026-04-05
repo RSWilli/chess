@@ -2,7 +2,6 @@ package chess
 
 import (
 	"fmt"
-	"slices"
 )
 
 // Position represents a state of a chess game. This can be used by engines to traverse the game tree.
@@ -25,24 +24,24 @@ type Position struct {
 	// Calculated properties, will be reset after a move is done:
 
 	// attacksTo maps each square to a [BitBoard] where all the attacking pieces are 1
-	attacksTo squareLookup[BitBoard]
+	attacksTo squareLookup[bitBoard]
 	// attacksFrom maps each square to a [BitBoard] where all the attacked squares are 1
-	attacksFrom squareLookup[BitBoard]
+	attacksFrom squareLookup[bitBoard]
 
 	// xRayKingAttacks contains all lines of attacks that could create a check when a piece moves.
 	// this is needed to detect pinned pieces
 	xRayKingAttacks []attackRay
 
 	// Bitboards for testing for checks in the move generation.
-	bishopCheckSquares BitBoard
-	rookCheckSquares   BitBoard
-	knightCheckSquares BitBoard
-	pawnCheckSquares   BitBoard
+	bishopCheckSquares bitBoard
+	rookCheckSquares   bitBoard
+	knightCheckSquares bitBoard
+	pawnCheckSquares   bitBoard
 }
 
 func NewPosition() *Position {
-	p, err := NewPositionFromFEN(DefaultFen, nil)
-	// b, err := NewGameFromFEN("r3kbnr/1b3ppp/pqn5/1pp1P3/3p4/1BN2N2/PP2QPPP/R1BR2K1 w kq - 0 1")
+	// p, err := NewPositionFromFEN(DefaultFen, nil)
+	p, err := NewPositionFromFEN("8/8/8/KpP3r1/8/8/8/6k1 w - b6 0 1", nil)
 
 	if err != nil {
 		panic(err)
@@ -59,12 +58,12 @@ func (p *Position) DoMove(m Move) {
 
 	p.board.DoMove(m)
 
-	if !m.Special.Has(CastleLong|CastleShort) && (p.Square(m.From) == Pawn || m.Special.Has(Captures)) {
+	if !m.Special.Has(CastleQueen|CastleKing) && (p.Square(m.From) == Pawn || m.Special.Has(Captures)) {
 		// 50 Move rule
 		p.HalfmoveClock = 0
 	}
 
-	if p.PlayerInTurn == Black {
+	if p.PlayerInTurn == White {
 		// Fullmove counter only increments after black played
 		p.Moves++
 	}
@@ -74,60 +73,36 @@ func (p *Position) DoMove(m Move) {
 }
 
 func (p *Position) reset() {
-	p.attacksFrom = squareLookup[BitBoard]{}
-	p.attacksTo = squareLookup[BitBoard]{}
-	p.xRayKingAttacks = slices.Grow(p.xRayKingAttacks[0:0], 8)
+	p.attacksFrom = squareLookup[bitBoard]{}
+	p.attacksTo = squareLookup[bitBoard]{}
+
+	// reuse the same cap, but trim the attacks:
+	p.xRayKingAttacks = p.xRayKingAttacks[0:0]
 }
 
 func (p *Position) computeAll() {
 	p.reset()
 
-	if p.PlayerInTurn == Black {
-		p.attacksTo, p.attacksFrom = calculateAttackMaps(
-			// we need to exclude our king so that it wont count as blocking an
-			// enemy's sliding piece attack
-			p.all()&^p.blackKing,
-			p.whiteKing,
-			p.whiteQueens,
-			p.whiteRooks,
-			p.whiteBishops,
-			p.whiteKnights,
-			p.whitePawns,
-			White,
-		)
+	p.attacksTo, p.attacksFrom = calculateAttackMaps(
+		// we need to exclude our king so that it wont count as blocking an
+		// enemy's sliding piece attack
+		p.all()&^p.ourKing,
+		p.theirKing,
+		p.theirQueens,
+		p.theirRooks,
+		p.theirBishops,
+		p.theirKnights,
+		p.theirPawns,
+	)
 
-		p.calculateSlidingKingAttacks(
-			p.blackKing,
-			p.whiteQueens,
-			p.whiteRooks,
-			p.whiteBishops,
-		)
+	p.calculateSlidingKingAttacks(
+		p.ourKing,
+		p.theirQueens,
+		p.theirRooks,
+		p.theirBishops,
+	)
 
-		p.calculateCheckSquares(p.whiteKing, p.whitePieces(), p.blackPieces(), p.PlayerInTurn)
-	} else {
-		p.attacksTo, p.attacksFrom = calculateAttackMaps(
-			// we need to exclude our king so that it wont count as blocking an
-			// enemy's sliding piece attack
-			p.all()&^p.whiteKing,
-			p.blackKing,
-			p.blackQueens,
-			p.blackRooks,
-			p.blackBishops,
-			p.blackKnights,
-			p.blackPawns,
-			Black,
-		)
-
-		p.calculateSlidingKingAttacks(
-			p.whiteKing,
-			p.blackQueens,
-			p.blackRooks,
-			p.blackBishops,
-		)
-
-		p.calculateCheckSquares(p.blackKing, p.blackPieces(), p.whitePieces(), p.PlayerInTurn)
-	}
-
+	p.calculateCheckSquares(p.theirKing, p.ours, p.theirs)
 }
 
 func (p *Position) UndoMove() {
@@ -158,23 +133,26 @@ func (p *Position) ParseMove(in string) (Move, error) {
 		return Move{}, err
 	}
 
+	from := p.toCurrentPerspective(m.From)
+	to := p.toCurrentPerspective(m.To)
+
 	// fast path rejection
 
-	if p.ours()&BitBoard(m.From) == 0 {
+	if p.ours&from == 0 {
 		return Move{}, fmt.Errorf("move not valid for current position: from is not a piece of current player")
 	}
 
-	if p.ours()&BitBoard(m.To) != 0 {
+	if p.ours&to != 0 {
 		return Move{}, fmt.Errorf("move target cannot be one of our pieces")
 	}
 
 	// slow path rejection, generate the moves for the piece
 
-	piece := p.Square(m.From)
+	piece := p.at(from)
 
 	legalMoves := make([]Move, 0, maxMovesSinglePiece)
 
-	p.generateMovesForPiece(piece, BitBoard(m.From), &legalMoves)
+	p.generateMovesForPiece(piece, from, &legalMoves)
 
 	for _, legalMove := range legalMoves {
 		if legalMove.From == m.From && legalMove.To == m.To && (m.Special == NoSpecial || legalMove.Special.Has(m.Special)) {
@@ -191,11 +169,7 @@ func (p *Position) Equals(other *Position) bool {
 
 // IsCheck is meant to be called by the visualization and returns true if the current player is in check
 func (p *Position) IsCheck() bool {
-	if p.PlayerInTurn == White {
-		return p.attacksTo.get(p.whiteKing) != 0
-	} else {
-		return p.attacksTo.get(p.blackKing) != 0
-	}
+	return p.attacksTo.get(p.ourKing) != 0
 }
 
 // IsCheckMate is meant to be called by the visualization and returns true if the current player is in checkmate

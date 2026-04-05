@@ -12,5 +12,11 @@
         {{ end }}
     </select>
 
+    <select name="position" id="startposition">
+        {{ range startpositions }}
+        <option value="{{ .FEN }}">{{ .Name }}</option>
+        {{ end }}
+    </select>
+
     <button type="submit">New Game</button>
 </form>

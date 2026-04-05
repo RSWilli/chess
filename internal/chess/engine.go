@@ -2,6 +2,7 @@ package chess
 
 import (
 	"fmt"
+	"io"
 	"slices"
 	"sync"
 
@@ -9,6 +10,8 @@ import (
 )
 
 type Engine struct {
+	logSink io.Writer
+
 	pos *Position
 
 	lock sync.Mutex
@@ -16,11 +19,20 @@ type Engine struct {
 	// the search loop
 	searching         bool
 	currentSearchOpts *search.Options
+
+	// currentLine contains the current series of moves that are being evaluated
+	currentLine []string
 }
 
-func NewEngine() *Engine {
+func NewEngine(logSink io.Writer) *Engine {
+	if logSink == nil {
+		logSink = io.Discard
+	}
+
 	return &Engine{
-		pos: NewPosition(),
+		pos:         NewPosition(),
+		logSink:     logSink,
+		currentLine: make([]string, 0, 20),
 	}
 }
 
@@ -30,13 +42,30 @@ func (e *Engine) NewGame() error {
 
 	// clear all caches here
 
+	e.currentLine = e.currentLine[0:0]
+
+	e.logf("new game started")
+
 	return nil
+}
+
+func (e *Engine) logf(f string, args ...any) {
+	if e.logSink != nil {
+		fmt.Fprintf(e.logSink, f, args...)
+	}
 }
 
 // Perft implements uci.Engine.
 func (e *Engine) Perft(depth int) (total int, moves map[string]int, err error) {
 	e.lock.Lock()
 	defer e.lock.Unlock()
+
+	defer func() {
+		if r := recover(); r != nil {
+			e.logf("caught panic in line: %v\n", e.currentLine)
+			err = fmt.Errorf("panicked in perft in engine: %v", r)
+		}
+	}()
 
 	if e.searching {
 		return 0, nil, fmt.Errorf("search already running, wont do perft")
@@ -46,12 +75,12 @@ func (e *Engine) Perft(depth int) (total int, moves map[string]int, err error) {
 	total = 0
 
 	for _, m := range e.pos.GenerateMoves() {
-		e.pos.DoMove(m)
+		e.doMove(m)
 		visited := 1
 		if depth > 1 {
 			visited = e.internalPerft(depth - 1)
 		}
-		e.pos.UndoMove()
+		e.undoMove()
 
 		moves[m.String()] = visited
 		total += visited
@@ -75,11 +104,11 @@ func (e *Engine) internalPerft(depth int) int {
 	total := 0
 
 	for _, m := range moves {
-		e.pos.DoMove(m)
+		e.doMove(m)
 
 		total += e.internalPerft(depth - 1)
 
-		e.pos.UndoMove()
+		e.undoMove()
 	}
 
 	return total
@@ -103,6 +132,8 @@ func (e *Engine) Position(fen string, moves []string) error {
 	}
 
 	e.pos = pos
+
+	e.currentLine = moves
 
 	return nil
 }
@@ -183,4 +214,15 @@ func (e *Engine) compareMoves(a, b Move) int {
 	}
 
 	return equal
+}
+
+func (e *Engine) doMove(m Move) {
+	e.currentLine = append(e.currentLine, m.String())
+	e.pos.DoMove(m)
+}
+
+func (e *Engine) undoMove() {
+	e.pos.UndoMove()
+
+	e.currentLine = e.currentLine[0 : len(e.currentLine)-1]
 }

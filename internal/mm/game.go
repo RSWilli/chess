@@ -31,7 +31,8 @@ type Game struct {
 
 	state GameState
 
-	history []string
+	startFEN string
+	history  []string
 
 	current player
 
@@ -64,7 +65,7 @@ func (g *Game) Move() error {
 	var err error
 	current := g.Current()
 
-	err = current.Position(chess.DefaultFen, g.history)
+	err = current.Position(g.startFEN, g.history)
 
 	if err != nil {
 		g.state = Error
@@ -109,15 +110,13 @@ func (g *Game) State() GameState {
 }
 
 func NewGame(white, black uci.Engine) *Game {
-	black.NewGame()
-	white.NewGame()
+	g, err := NewGameWithFEN(chess.DefaultFen, white, black)
 
-	return &Game{
-		Position: chess.NewPosition(),
-		current:  playerWhite,
-		white:    white,
-		black:    black,
+	if err != nil {
+		panic("could not parse default FEN for new game")
 	}
+
+	return g
 }
 
 func NewGameWithFEN(fen string, white, black uci.Engine) (*Game, error) {
@@ -130,8 +129,21 @@ func NewGameWithFEN(fen string, white, black uci.Engine) (*Game, error) {
 		return nil, err
 	}
 
+	err = white.Position(fen, nil)
+
+	if err != nil {
+		return nil, fmt.Errorf("could not set white's position: %v", err)
+	}
+
+	err = black.Position(fen, nil)
+
+	if err != nil {
+		return nil, fmt.Errorf("could not set black's position: %v", err)
+	}
+
 	return &Game{
 		Position: pos,
+		startFEN: fen,
 		current:  playerWhite,
 		white:    white,
 		black:    black,

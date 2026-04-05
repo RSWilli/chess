@@ -1,6 +1,7 @@
 package chess
 
 import (
+	"fmt"
 	"iter"
 	"strings"
 
@@ -14,121 +15,133 @@ type board struct {
 	castling        CastlingAbility
 	enPassantTarget Square
 
-	whitePawns   BitBoard
-	whiteKnights BitBoard
-	whiteBishops BitBoard
-	whiteRooks   BitBoard
-	whiteQueens  BitBoard
-	whiteKing    BitBoard
+	// our pieces are the pieces of the color of the player in turn
+	ours       bitBoard
+	ourPawns   bitBoard
+	ourKnights bitBoard
+	ourBishops bitBoard
+	ourRooks   bitBoard
+	ourQueens  bitBoard
+	ourKing    bitBoard
 
-	blackPawns   BitBoard
-	blackKnights BitBoard
-	blackBishops BitBoard
-	blackRooks   BitBoard
-	blackQueens  BitBoard
-	blackKing    BitBoard
+	// their pieces are the pieces of the color of the opponent
+	theirs       bitBoard
+	theirPawns   bitBoard
+	theirKnights bitBoard
+	theirBishops bitBoard
+	theirRooks   bitBoard
+	theirQueens  bitBoard
+	theirKing    bitBoard
 
 	HashKey zobrist.Hash
 }
 
-func (p *board) DoMove(m Move) {
-	if m.Special.Has(CastleLong | CastleShort) {
+func (b *board) isValid() bool {
+	if b.ourKing.Count() != 1 || b.theirKing.Count() != 1 {
+		return false
+	}
+
+	return true
+}
+
+func (b *board) DoMove(m Move) {
+	if m.Special.Has(CastleQueen | CastleKing) {
 		// Castling move:
-		if p.PlayerInTurn == White && m.Special == CastleShort {
-			p.unset(e1)
-			p.unset(h1)
+		if b.PlayerInTurn == White && m.Special == CastleKing {
+			b.unset(m.From)
+			b.unset(h1)
 
-			p.set(whiteCastleKingKingTarget, WhiteKing)
-			p.set(whiteCastleKingRookTarget, WhiteRook)
+			b.set(g1, WhiteKing)
+			b.set(f1, WhiteRook)
 
-			p.removeCastling(CastleWhiteKing)
-			p.removeCastling(CastleWhiteQueen)
+			b.removeCastling(CastleWhiteKing)
+			b.removeCastling(CastleWhiteQueen)
 		}
-		if p.PlayerInTurn == White && m.Special == CastleLong {
-			p.unset(e1)
-			p.unset(a1)
+		if b.PlayerInTurn == White && m.Special == CastleQueen {
+			b.unset(m.From)
+			b.unset(a1)
 
-			p.set(whiteCastleQueenKingTarget, WhiteKing)
-			p.set(whiteCastleQueenRookTarget, WhiteRook)
+			b.set(c1, WhiteKing)
+			b.set(d1, WhiteRook)
 
-			p.removeCastling(CastleWhiteKing)
-			p.removeCastling(CastleWhiteQueen)
+			b.removeCastling(CastleWhiteKing)
+			b.removeCastling(CastleWhiteQueen)
 		}
-		if p.PlayerInTurn == Black && m.Special == CastleShort {
-			p.unset(e8)
-			p.unset(h8)
+		if b.PlayerInTurn == Black && m.Special == CastleKing {
+			b.unset(m.From)
+			b.unset(h8)
 
-			p.set(blackCastleKingKingTarget, BlackKing)
-			p.set(blackCastleKingRookTarget, BlackRook)
+			b.set(g8, BlackKing)
+			b.set(f8, BlackRook)
 
-			p.removeCastling(CastleBlackKing)
-			p.removeCastling(CastleBlackQueen)
+			b.removeCastling(CastleBlackKing)
+			b.removeCastling(CastleBlackQueen)
 		}
-		if p.PlayerInTurn == Black && m.Special == CastleLong {
-			p.unset(e8)
-			p.unset(a8)
+		if b.PlayerInTurn == Black && m.Special == CastleQueen {
+			b.unset(m.From)
+			b.unset(a8)
 
-			p.set(blackCastleQueenKingTarget, BlackKing)
-			p.set(blackCastleQueenRookTarget, BlackRook)
+			b.set(c8, BlackKing)
+			b.set(d8, BlackRook)
 
-			p.removeCastling(CastleBlackKing)
-			p.removeCastling(CastleBlackQueen)
+			b.removeCastling(CastleBlackKing)
+			b.removeCastling(CastleBlackQueen)
 		}
 
-		p.clearEnpassant()
+		b.clearEnpassant()
 	} else {
-		piece := p.Square(m.From)
+		piece := b.Square(m.From)
 
 		// clear the old square
-		p.unset(m.From)
-		p.unset(m.To)
+		b.unset(m.From)
+		b.unset(m.To)
 
 		switch {
 		case m.Special.Has(PromoteQueen):
-			piece = Queen | p.PlayerInTurn
+			piece = Queen | b.PlayerInTurn
 		case m.Special.Has(PromoteRook):
-			piece = Rook | p.PlayerInTurn
+			piece = Rook | b.PlayerInTurn
 		case m.Special.Has(PromoteKnight):
-			piece = Knight | p.PlayerInTurn
+			piece = Knight | b.PlayerInTurn
 		case m.Special.Has(PromoteBishop):
-			piece = Bishop | p.PlayerInTurn
+			piece = Bishop | b.PlayerInTurn
 		}
 
 		// remove the en-passant captured pawn, no need to check for the piece type since the en passant
 		// square is always empty, so no other move can capture on it
-		if m.Special.Has(Captures) && m.To == p.enPassantTarget && p.PlayerInTurn == White {
-			p.unset(Square(BitBoard(m.To).Down()))
-		} else if m.Special.Has(Captures) && m.To == p.enPassantTarget && p.PlayerInTurn == Black {
-			p.unset(Square(BitBoard(m.To).Up()))
+		if m.Special.Has(Captures) && m.To == b.enPassantTarget && b.PlayerInTurn == White {
+			b.unset(Square(bitBoard(m.To).Down()))
+		} else if m.Special.Has(Captures) && m.To == b.enPassantTarget && b.PlayerInTurn == Black {
+			b.unset(Square(bitBoard(m.To).Up()))
 		}
 
 		// save the en passant square for the move generation of the en passant moves
-		if m.Special.Has(DoublePawnPush) && p.PlayerInTurn == White {
-			p.setEnpassant(Square(BitBoard(m.From).Up()))
-		} else if m.Special.Has(DoublePawnPush) && p.PlayerInTurn == Black {
-			p.setEnpassant(Square(BitBoard(m.From).Down()))
+		if m.Special.Has(DoublePawnPush) && b.PlayerInTurn == White {
+			b.setEnpassant(Square(bitBoard(m.From).Up()))
+		} else if m.Special.Has(DoublePawnPush) && b.PlayerInTurn == Black {
+			b.setEnpassant(Square(bitBoard(m.From).Down()))
 		} else {
-			p.clearEnpassant()
+			b.clearEnpassant()
 		}
 
 		// prevent castling moves, but only if set because the hash update depends on it:
-		if p.castling.Has(CastleWhiteQueen) && (m.From == a1 || m.From == e1 || m.To == a1) {
-			p.removeCastling(CastleWhiteQueen)
+		if b.castling.Has(CastleWhiteQueen) && (m.From == a1 || m.From == e1 || m.To == a1) {
+			b.removeCastling(CastleWhiteQueen)
 		}
 
-		if p.castling.Has(CastleWhiteKing) && (m.From == h1 || m.From == e1 || m.To == h1) {
-			p.removeCastling(CastleWhiteKing)
+		if b.castling.Has(CastleWhiteKing) && (m.From == h1 || m.From == e1 || m.To == h1) {
+			b.removeCastling(CastleWhiteKing)
 		}
 
-		if p.castling.Has(CastleBlackQueen) && (m.From == a8 || m.From == e8 || m.To == a8) {
-			p.removeCastling(CastleBlackQueen)
+		if b.castling.Has(CastleBlackQueen) && (m.From == a8 || m.From == e8 || m.To == a8) {
+			b.removeCastling(CastleBlackQueen)
 		}
 
-		if p.castling.Has(CastleBlackKing) && (m.From == h8 || m.From == e8 || m.To == h8) {
-			p.removeCastling(CastleBlackKing)
+		if b.castling.Has(CastleBlackKing) && (m.From == h8 || m.From == e8 || m.To == h8) {
+			b.removeCastling(CastleBlackKing)
 		}
 
-		p.set(m.To, piece)
+		b.set(m.To, piece)
 	}
 
 	// FIXME: the wiki says that losing castling increments the halfmove clock
@@ -138,21 +151,36 @@ func (p *board) DoMove(m Move) {
 
 	// lostCastling := previousCastling != nowCastling
 
-	// Move done, reset state and recalculate:
-	if p.PlayerInTurn == White {
-		p.PlayerInTurn = Black
-	} else {
-		p.PlayerInTurn = White
-	}
+	b.SwitchSide()
 
-	p.HashKey = p.HashKey.Update(zobrist.SwitchSide)
+	b.HashKey = b.HashKey.Update(zobrist.SwitchSide)
+
+	if !b.isValid() {
+		panic(fmt.Sprintf("DoMove resulted in invalid board after %s", m.String()))
+	}
+}
+
+// SwitchSide changes the perspective of the [board]
+func (b *board) SwitchSide() {
+	b.PlayerInTurn = b.PlayerInTurn.SwitchColor()
+
+	b.ours, b.theirs = b.theirs.rotate180(), b.ours.rotate180()
+
+	b.ourPawns, b.theirPawns = b.theirPawns.rotate180(), b.ourPawns.rotate180()
+	b.ourKnights, b.theirKnights = b.theirKnights.rotate180(), b.ourKnights.rotate180()
+	b.ourBishops, b.theirBishops = b.theirBishops.rotate180(), b.ourBishops.rotate180()
+	b.ourRooks, b.theirRooks = b.theirRooks.rotate180(), b.ourRooks.rotate180()
+	b.ourQueens, b.theirQueens = b.theirQueens.rotate180(), b.ourQueens.rotate180()
+	b.ourKing, b.theirKing = b.theirKing.rotate180(), b.ourKing.rotate180()
 }
 
 func (b board) ASCIIArt() string {
 	sb := strings.Builder{}
 
+	sb.WriteString("    a   b   c   d   e   f   g   h  \n")
 	for rank := range 8 {
-		sb.WriteString("+---+---+---+---+---+---+---+---+\n|")
+		sb.WriteString("  +---+---+---+---+---+---+---+---+\n")
+		fmt.Fprintf(&sb, "%d |", 8-rank)
 		for file := range 8 {
 			piece := b.Square(NewSquare(rank, file))
 			sb.WriteRune(' ')
@@ -160,9 +188,10 @@ func (b board) ASCIIArt() string {
 			sb.WriteRune(' ')
 			sb.WriteRune('|')
 		}
-		sb.WriteByte('\n')
+		fmt.Fprintf(&sb, " %d\n", 8-rank)
 	}
-	sb.WriteString("+---+---+---+---+---+---+---+---+\n")
+	sb.WriteString("  +---+---+---+---+---+---+---+---+\n")
+	sb.WriteString("    a   b   c   d   e   f   g   h  \n")
 
 	switch b.PlayerInTurn {
 	case White:
@@ -182,32 +211,62 @@ func (b board) ASCIIArt() string {
 	return sb.String()
 }
 
+func (b *board) toWhitePerspective(sq bitBoard) Square {
+	switch b.PlayerInTurn {
+	case White:
+		return Square(sq)
+	case Black:
+		return Square(sq.rotate180())
+	default:
+		panic(fmt.Sprintf("invalid player in turn: %s", b.PlayerInTurn))
+	}
+}
+
+func (b *board) toCurrentPerspective(sq Square) bitBoard {
+	switch b.PlayerInTurn {
+	case White:
+		return bitBoard(sq)
+	case Black:
+		return bitBoard(sq).rotate180()
+	default:
+		panic(fmt.Sprintf("invalid player in turn: %s", b.PlayerInTurn))
+	}
+}
+
+// Square returns the piece at the given square.
 func (b *board) Square(sq Square) Piece {
+	relativeSquare := b.toCurrentPerspective(sq)
+	return b.at(relativeSquare)
+}
+
+// at returns the piece at the given BitBoard (Square), but from the current players perspective.
+func (b *board) at(sq bitBoard) Piece {
 	switch {
-	case b.whitePawns.Has(sq):
-		return WhitePawn
-	case b.whiteKnights.Has(sq):
-		return WhiteKnight
-	case b.whiteBishops.Has(sq):
-		return WhiteBishop
-	case b.whiteRooks.Has(sq):
-		return WhiteRook
-	case b.whiteQueens.Has(sq):
-		return WhiteQueen
-	case b.whiteKing.Has(sq):
-		return WhiteKing
-	case b.blackPawns.Has(sq):
-		return BlackPawn
-	case b.blackKnights.Has(sq):
-		return BlackKnight
-	case b.blackBishops.Has(sq):
-		return BlackBishop
-	case b.blackRooks.Has(sq):
-		return BlackRook
-	case b.blackQueens.Has(sq):
-		return BlackQueen
-	case b.blackKing.Has(sq):
-		return BlackKing
+	case b.ourPawns.Has(sq):
+		return Pawn | b.PlayerInTurn
+	case b.ourKnights.Has(sq):
+		return Knight | b.PlayerInTurn
+	case b.ourBishops.Has(sq):
+		return Bishop | b.PlayerInTurn
+	case b.ourRooks.Has(sq):
+		return Rook | b.PlayerInTurn
+	case b.ourQueens.Has(sq):
+		return Queen | b.PlayerInTurn
+	case b.ourKing.Has(sq):
+		return King | b.PlayerInTurn
+		// opponent:
+	case b.theirPawns.Has(sq):
+		return Pawn | b.PlayerInTurn.SwitchColor()
+	case b.theirKnights.Has(sq):
+		return Knight | b.PlayerInTurn.SwitchColor()
+	case b.theirBishops.Has(sq):
+		return Bishop | b.PlayerInTurn.SwitchColor()
+	case b.theirRooks.Has(sq):
+		return Rook | b.PlayerInTurn.SwitchColor()
+	case b.theirQueens.Has(sq):
+		return Queen | b.PlayerInTurn.SwitchColor()
+	case b.theirKing.Has(sq):
+		return King | b.PlayerInTurn.SwitchColor()
 	default:
 		return Empty
 	}
@@ -215,31 +274,45 @@ func (b *board) Square(sq Square) Piece {
 
 // set sets the given piece on the given square
 func (b *board) set(sq Square, piece Piece) {
+	relativeSquare := b.toCurrentPerspective(sq)
+
+	opponent := b.PlayerInTurn.SwitchColor()
+
+	switch piece.Color() {
+	case b.PlayerInTurn:
+		b.ours = b.ours.Set(relativeSquare)
+	case opponent:
+		b.theirs = b.theirs.Set(relativeSquare)
+	default:
+		panic("unexpected piece color")
+	}
+
 	switch piece {
-	case WhitePawn:
-		b.whitePawns = b.whitePawns.Set(sq)
-	case WhiteKnight:
-		b.whiteKnights = b.whiteKnights.Set(sq)
-	case WhiteBishop:
-		b.whiteBishops = b.whiteBishops.Set(sq)
-	case WhiteRook:
-		b.whiteRooks = b.whiteRooks.Set(sq)
-	case WhiteQueen:
-		b.whiteQueens = b.whiteQueens.Set(sq)
-	case WhiteKing:
-		b.whiteKing = b.whiteKing.Set(sq)
-	case BlackPawn:
-		b.blackPawns = b.blackPawns.Set(sq)
-	case BlackKnight:
-		b.blackKnights = b.blackKnights.Set(sq)
-	case BlackBishop:
-		b.blackBishops = b.blackBishops.Set(sq)
-	case BlackRook:
-		b.blackRooks = b.blackRooks.Set(sq)
-	case BlackQueen:
-		b.blackQueens = b.blackQueens.Set(sq)
-	case BlackKing:
-		b.blackKing = b.blackKing.Set(sq)
+	case b.PlayerInTurn | Pawn:
+		b.ourPawns = b.ourPawns.Set(relativeSquare)
+	case b.PlayerInTurn | Knight:
+		b.ourKnights = b.ourKnights.Set(relativeSquare)
+	case b.PlayerInTurn | Bishop:
+		b.ourBishops = b.ourBishops.Set(relativeSquare)
+	case b.PlayerInTurn | Rook:
+		b.ourRooks = b.ourRooks.Set(relativeSquare)
+	case b.PlayerInTurn | Queen:
+		b.ourQueens = b.ourQueens.Set(relativeSquare)
+	case b.PlayerInTurn | King:
+		b.ourKing = b.ourKing.Set(relativeSquare)
+
+	case opponent | Pawn:
+		b.theirPawns = b.theirPawns.Set(relativeSquare)
+	case opponent | Knight:
+		b.theirKnights = b.theirKnights.Set(relativeSquare)
+	case opponent | Bishop:
+		b.theirBishops = b.theirBishops.Set(relativeSquare)
+	case opponent | Rook:
+		b.theirRooks = b.theirRooks.Set(relativeSquare)
+	case opponent | Queen:
+		b.theirQueens = b.theirQueens.Set(relativeSquare)
+	case opponent | King:
+		b.theirKing = b.theirKing.Set(relativeSquare)
 	default:
 		panic("unexpected piece received by set")
 	}
@@ -257,19 +330,24 @@ func (b *board) unset(sq Square) {
 		b.HashKey = b.HashKey.Update(piece.zobrist() + sq.index())
 	}
 
-	b.whitePawns = b.whitePawns.Unset(sq)
-	b.whiteKnights = b.whiteKnights.Unset(sq)
-	b.whiteBishops = b.whiteBishops.Unset(sq)
-	b.whiteRooks = b.whiteRooks.Unset(sq)
-	b.whiteQueens = b.whiteQueens.Unset(sq)
-	b.whiteKing = b.whiteKing.Unset(sq)
+	relativeSquare := b.toCurrentPerspective(sq)
 
-	b.blackPawns = b.blackPawns.Unset(sq)
-	b.blackKnights = b.blackKnights.Unset(sq)
-	b.blackBishops = b.blackBishops.Unset(sq)
-	b.blackRooks = b.blackRooks.Unset(sq)
-	b.blackQueens = b.blackQueens.Unset(sq)
-	b.blackKing = b.blackKing.Unset(sq)
+	b.ours = b.ours.Unset(relativeSquare)
+	b.theirs = b.theirs.Unset(relativeSquare)
+
+	b.ourPawns = b.ourPawns.Unset(relativeSquare)
+	b.ourKnights = b.ourKnights.Unset(relativeSquare)
+	b.ourBishops = b.ourBishops.Unset(relativeSquare)
+	b.ourRooks = b.ourRooks.Unset(relativeSquare)
+	b.ourQueens = b.ourQueens.Unset(relativeSquare)
+	b.ourKing = b.ourKing.Unset(relativeSquare)
+
+	b.theirPawns = b.theirPawns.Unset(relativeSquare)
+	b.theirKnights = b.theirKnights.Unset(relativeSquare)
+	b.theirBishops = b.theirBishops.Unset(relativeSquare)
+	b.theirRooks = b.theirRooks.Unset(relativeSquare)
+	b.theirQueens = b.theirQueens.Unset(relativeSquare)
+	b.theirKing = b.theirKing.Unset(relativeSquare)
 }
 
 func (b *board) removeCastling(ab CastlingAbility) {
@@ -295,49 +373,13 @@ func (b *board) setEnpassant(sq Square) {
 	b.HashKey = b.HashKey.Update(zobrist.EnPassantAFile + b.enPassantTarget.File())
 }
 
-func (b *board) whitePieces() BitBoard {
-	return b.whitePawns |
-		b.whiteKnights |
-		b.whiteBishops |
-		b.whiteRooks |
-		b.whiteQueens |
-		b.whiteKing
-}
-
-func (b *board) blackPieces() BitBoard {
-	return b.blackPawns |
-		b.blackKnights |
-		b.blackBishops |
-		b.blackRooks |
-		b.blackQueens |
-		b.blackKing
-}
-
-// ours returns the pieces of the current player
-func (b *board) ours() BitBoard {
-	if b.PlayerInTurn == White {
-		return b.whitePieces()
-	} else {
-		return b.blackPieces()
-	}
-}
-
-// theirs returns the pieces of the current opponent player
-func (b *board) theirs() BitBoard {
-	if b.PlayerInTurn == Black {
-		return b.whitePieces()
-	} else {
-		return b.blackPieces()
-	}
-}
-
 // all returns a BitBoard containing all pieces
-func (b *board) all() BitBoard {
-	return b.whitePieces() | b.blackPieces()
+func (b *board) all() bitBoard {
+	return b.ours | b.theirs
 }
 
 func (b *board) index(i int) Piece {
-	sq := Square(1 << i)
+	sq := NewSquareFromIndex(i)
 	return b.Square(sq)
 }
 
@@ -353,7 +395,7 @@ func (b *board) pieces() iter.Seq[Piece] {
 	}
 }
 
-// hashFull computes the [zobrist.Hash] for the [position]. It is way slower than incrementally updating the hash,
+// hashFull computes the [zobrist.Hash] for the [board]. It is way slower than incrementally updating the hash,
 // which is what [board.DoMove] does
 func (b *board) hashFull() {
 

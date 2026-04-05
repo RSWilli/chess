@@ -44,7 +44,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	local := chess.NewEngine()
+	local := chess.NewEngine(nil)
 
 	var stats stats
 

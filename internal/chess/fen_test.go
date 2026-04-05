@@ -22,6 +22,8 @@ func TestBoardFENs(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		fmt.Println(b.ASCIIArt())
+
 		marshaledFEN := b.FEN()
 
 		if fen != marshaledFEN {

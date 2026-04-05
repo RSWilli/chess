@@ -65,7 +65,7 @@ const EngineLocal = "local"
 func (r EnginesRegistry) NewEngine(name string) (uci.Engine, error) {
 	switch name {
 	case EngineLocal:
-		return chess.NewEngine(), nil
+		return chess.NewEngine(nil), nil
 	case EngineStockfish:
 		return uci.NewStockfish()
 	case EngineHuman:

@@ -73,6 +73,9 @@ func NewPositionFromFEN(fen string, moves []string) (*Position, error) {
 
 	p := &Position{}
 
+	// FEN is always from whites perspective:
+	p.PlayerInTurn = White
+
 	ranks := strings.Split(parts[0], fenRankSeparator)
 
 	if len(ranks) != 8 {
@@ -114,7 +117,9 @@ func NewPositionFromFEN(fen string, moves []string) (*Position, error) {
 		return nil, fmt.Errorf("%w: expected a color, got %s", ErrMalformedFEN, parts[1])
 	}
 
-	p.PlayerInTurn = player
+	if player != White {
+		p.SwitchSide()
+	}
 
 	// castling
 	if parts[2] == "-" {
@@ -184,6 +189,10 @@ func NewPositionFromFEN(fen string, moves []string) (*Position, error) {
 		}
 
 		p.DoMove(move)
+	}
+
+	if !p.isValid() {
+		return nil, fmt.Errorf("invalid board configuration given")
 	}
 
 	return p, nil

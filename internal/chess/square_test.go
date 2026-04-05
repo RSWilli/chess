@@ -1,29 +1,27 @@
-package chess_test
+package chess
 
 import (
 	"testing"
-
-	"github.com/rswilli/chess/internal/chess"
 )
 
 func TestParseTile(t *testing.T) {
-	squares := []string{
-		"e4",
-		"a8",
-	}
 
-	for _, square := range squares {
-		tile, err := chess.ParseSquare(square)
+	for rank := range ranks {
+		for file := range files {
+			square := files[file:file+1] + ranks[rank:rank+1]
 
-		if err != nil {
-			t.Fatal(err)
-		}
+			tile, err := ParseSquare(square)
 
-		t.Log(tile.Debug())
-		t.Log(tile)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		if tile.String() != square {
-			t.Fatalf("expected %s, got %s", square, tile.String())
+			t.Log(tile.Debug())
+			t.Log(tile)
+
+			if tile.String() != square {
+				t.Fatalf("expected %s, got %s", square, tile.String())
+			}
 		}
 	}
 }

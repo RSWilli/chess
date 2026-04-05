@@ -6,10 +6,10 @@ import (
 )
 
 func BenchmarkStdMapSquareLookup(b *testing.B) {
-	stdmap := make(map[BitBoard]BitBoard, 64)
-	all := BitBoard(math.MaxUint64)
+	stdmap := make(map[bitBoard]bitBoard, 64)
+	all := bitBoard(math.MaxUint64)
 
-	var squares []BitBoard
+	var squares []bitBoard
 
 	for sq := range all.Ones() {
 		squares = append(squares, sq)
@@ -25,11 +25,11 @@ func BenchmarkStdMapSquareLookup(b *testing.B) {
 }
 
 func BenchmarkSpecialSquareLookup(b *testing.B) {
-	var squareLookup squareLookup[BitBoard]
+	var squareLookup squareLookup[bitBoard]
 
-	all := BitBoard(math.MaxUint64)
+	all := bitBoard(math.MaxUint64)
 
-	var squares []BitBoard
+	var squares []bitBoard
 
 	for sq := range all.Ones() {
 		squares = append(squares, sq)

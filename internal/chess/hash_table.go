@@ -7,16 +7,16 @@ package chess
 //
 // see [hashTable.get] for the hashing formula
 type hashTable struct {
-	magic BitBoard
-	bits  BitBoard
+	magic bitBoard
+	bits  bitBoard
 
 	// data must be initialized with the values at their correct location
 	// as defined by rotate and shift
-	data []BitBoard
+	data []bitBoard
 }
 
 // get returns the possible target squares when given the occupancy bitBoard
-func (h hashTable) get(key BitBoard) BitBoard {
+func (h hashTable) get(key bitBoard) bitBoard {
 	i := (key * h.magic) >> (64 - h.bits)
 
 	return h.data[i]

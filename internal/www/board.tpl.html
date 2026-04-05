@@ -1,33 +1,33 @@
 <form id="board" method="post">
     <span></span>
-    {{ range $j, $file := files }}
+    {{ range $file := files }}
     <span>{{ $file }}</span>
     {{ end}}
     <span></span>
     <!-- board tiles -->
-    {{ range $i, $rank := ranks }}
+    {{ range $rank := ranks }}
     <span>{{ $rank }}</span>
-    {{ range $j, $file := files }}
+    {{ range $file := files }}
     {{- $square := printf "%s%s" $file $rank }}
     {{- $canMoveFrom := $.CanMoveFrom $square }}
     {{- $move := $.RegularMoveTo $square }}
     {{- $promotionMoves := $.PromotionMovesTo $square }}
     {{ $pieceAt := $.PieceAt $square }}
     {{ if $canMoveFrom }}
-        <a href="/?square={{$square}}" class="tile {{ $.ClassesFor $square }}" data-square="$square">
+        <a href="/?square={{$square}}" class="tile {{ $.ClassesFor $square }}" data-square="{{$square}}">
             {{ if $pieceAt}}
             <img class="piece" src="{{ $pieceAt }}" draggable="false">
             {{ end }}
         </a>
     {{ else if $move }}
-        <button type="submit" class="tile {{ $.ClassesFor $square }}" data-square="$square" formaction="/move/{{ $move }}">
+        <button type="submit" class="tile {{ $.ClassesFor $square }}" data-square="{{$square}}" formaction="/move/{{ $move }}">
             {{ if $pieceAt}}
             <img class="piece" src="{{ $pieceAt }}" draggable="false">
             {{ end }}
         </button>
     {{ else if len $promotionMoves }}
         <details class="promotiontile" name="promotions">
-            <summary class="tile {{ $.ClassesFor $square }}" data-square="$square">
+            <summary class="tile {{ $.ClassesFor $square }}" data-square="{{$square}}">
                 {{ if $pieceAt}}
                 <img class="piece" src="{{ $pieceAt }}" draggable="false">
                 {{ end }}
@@ -41,13 +41,13 @@
             </div>
         </details>
     {{ else if $.Selected }}
-        <a href="/" class="tile {{ $.ClassesFor $square }}" data-square="$square">
+        <a href="/" class="tile {{ $.ClassesFor $square }}" data-square="{{$square}}">
             {{ if $pieceAt}}
             <img class="piece" src="{{ $pieceAt }}" draggable="false">
             {{ end }}
         </a>
     {{ else }}
-        <div class="tile {{ $.ClassesFor $square }}" data-square="$square">
+        <div class="tile {{ $.ClassesFor $square }}" data-square="{{$square}}">
             {{ if $pieceAt}}
             <img class="piece" src="{{ $pieceAt }}" draggable="false">
             {{ end }}
@@ -58,7 +58,7 @@
     {{ end }}
     <!-- after board tiles: -->
     <span></span>
-    {{ range $j, $file := files }}
+    {{ range $file := files }}
     <span>{{ $file }}</span>
     {{ end}}
     <span></span>

@@ -163,6 +163,7 @@ func (h *Handler) handleNewGame(w http.ResponseWriter, r *http.Request) {
 
 	white := r.FormValue("white")
 	black := r.FormValue("black")
+	fen := r.FormValue("position")
 
 	whitePlayer, err := h.engines.NewEngine(white)
 
@@ -178,11 +179,18 @@ func (h *Handler) handleNewGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	newgame, err := mm.NewGameWithFEN(fen, whitePlayer, blackPlayer)
+
+	if err != nil {
+		http.Error(w, "could not create game", http.StatusBadRequest)
+		return
+	}
+
 	if h.game != nil {
 		h.game.Stop()
 	}
 
-	h.game = mm.NewGame(whitePlayer, blackPlayer)
+	h.game = newgame
 	h.gamecond.Signal()
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)

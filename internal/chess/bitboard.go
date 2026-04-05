@@ -3,41 +3,42 @@ package chess
 import (
 	"iter"
 	"math/bits"
+	"strings"
 )
 
-// BitBoard represents some kind of chess board state (either a move or a piece). Each bit
+// bitBoard represents some kind of chess board state (either a move or a piece). Each bit
 // in the uint64 represents a single square on the board. It is represented from a8-h8 through a1-h1
-type BitBoard uint64
+type bitBoard uint64
 
-func (b BitBoard) String() string {
-	s := ""
-	var i BitBoard = 1
+func (b bitBoard) String() string {
+	var s strings.Builder
+	var i bitBoard = 1 << 63
 
 	for range 8 {
 		for range 8 {
 			if i&b != 0 {
-				s += "x"
+				s.WriteString("x")
 			} else {
-				s += "."
+				s.WriteString(".")
 			}
 
-			i = i << 1
+			i = i >> 1
 		}
 
-		s += "\n"
+		s.WriteString("\n")
 	}
 
-	return s
+	return s.String()
 }
 
-func (b BitBoard) Each(f func(b BitBoard)) {
+func (b bitBoard) Each(f func(b bitBoard)) {
 	for bb := range b.Ones() {
 		f(bb)
 	}
 }
 
-func (b BitBoard) Ones() iter.Seq[BitBoard] {
-	return func(yield func(BitBoard) bool) {
+func (b bitBoard) Ones() iter.Seq[bitBoard] {
+	return func(yield func(bitBoard) bool) {
 		tmp := b
 		for tmp != 0 {
 			// find the least significant bit
@@ -54,57 +55,78 @@ func (b BitBoard) Ones() iter.Seq[BitBoard] {
 	}
 }
 
-func (b BitBoard) Has(sq Square) bool {
-	return b&BitBoard(sq) != 0
+func (b bitBoard) index() int {
+	return 64 - bits.Len64(uint64(b))
 }
 
-func (b BitBoard) Set(sq Square) BitBoard {
-	return b | BitBoard(sq)
+func (b bitBoard) Has(other bitBoard) bool {
+	return b&other != 0
 }
 
-func (b BitBoard) Unset(sq Square) BitBoard {
-	return b &^ BitBoard(sq)
+func (b bitBoard) Set(other bitBoard) bitBoard {
+	return b | other
 }
 
-func (b BitBoard) Count() int {
+func (b bitBoard) Unset(other bitBoard) bitBoard {
+	return b &^ other
+}
+
+func (b bitBoard) Count() int {
 	return bits.OnesCount64(uint64(b))
 }
 
-const (
-	aFile BitBoard = 0x0101010101010101
-	hFile          = aFile << 7
-)
-
-func (b BitBoard) Left() BitBoard {
+func (b bitBoard) Left() bitBoard {
 	// prevent wrap around to h file, going left can never reach it
-	return (b >> 1) &^ hFile
+	return (b << 1) &^ bitBoard(hFile)
 }
 
-func (b BitBoard) Right() BitBoard {
+func (b bitBoard) Right() bitBoard {
 	// prevent wrap around to a file, going right can never reach it
-	return (b << 1) &^ aFile
+	return (b >> 1) &^ bitBoard(aFile)
 }
 
-func (b BitBoard) Up() BitBoard {
-	return b >> 8
-}
-
-func (b BitBoard) Down() BitBoard {
+func (b bitBoard) Up() bitBoard {
 	return b << 8
 }
 
-func (b BitBoard) DiagUp() BitBoard {
+func (b bitBoard) Down() bitBoard {
+	return b >> 8
+}
+
+func (b bitBoard) DiagUp() bitBoard {
 	return b.Up().Right()
 }
 
-func (b BitBoard) DiagDown() BitBoard {
+func (b bitBoard) DiagDown() bitBoard {
 	return b.Down().Right()
 }
 
-func (b BitBoard) AntiDiagUp() BitBoard {
+func (b bitBoard) AntiDiagUp() bitBoard {
 	return b.Up().Left()
 }
 
-func (b BitBoard) AntiDiagDown() BitBoard {
+func (b bitBoard) AntiDiagDown() bitBoard {
 	return b.Down().Left()
+}
+
+// flipVertical flips the [bitBoard] vertically
+func (b bitBoard) flipVertical() bitBoard {
+	return bitBoard(bits.ReverseBytes64(uint64(b)))
+}
+
+// flipHorizontal flips the [bitBoard] horizontally
+// taken from https://www.chessprogramming.org/Flipping_Mirroring_and_Rotating and adapted to Go
+func (b bitBoard) flipHorizontal() bitBoard {
+	const k1 = 0x5555555555555555
+	const k2 = 0x3333333333333333
+	const k4 = 0x0f0f0f0f0f0f0f0f
+	b = ((b >> 1) & k1) | ((b & k1) << 1)
+	b = ((b >> 2) & k2) | ((b & k2) << 2)
+	b = ((b >> 4) & k4) | ((b & k4) << 4)
+	return b
+}
+
+// rotate180 rotates the [bitBoard], useful for switching sides.
+func (b bitBoard) rotate180() bitBoard {
+	return b.flipHorizontal().flipVertical()
 }

@@ -83,11 +83,11 @@ func (d BoardData) ClassesFor(sq string) string {
 		classes = append(classes, "loose")
 	}
 
-	if (piece&^(chess.White|chess.Black) == chess.King) && piece != (chess.King|d.Position.PlayerInTurn) && d.Position.IsCheckMate() {
+	if (piece.Type() == chess.King) && piece != (chess.King|d.Position.PlayerInTurn) && d.Position.IsCheckMate() {
 		classes = append(classes, "win")
 	}
 
-	if (piece&^(chess.White|chess.Black) == chess.King) && d.Position.IsDraw() {
+	if (piece.Type() == chess.King) && d.Position.IsDraw() {
 		classes = append(classes, "draw")
 	}
 
@@ -178,9 +178,9 @@ func (d BoardData) PromotionPiece(m chess.Move) string {
 }
 
 var funcMap = template.FuncMap(map[string]any{
-	"ranks": ranks,
-	"files": files,
-	"color": color,
+	"ranks":          ranks,
+	"files":          files,
+	"startpositions": startpositions,
 })
 
 // ranks return the ranks of the board in the order they are needed in the HTML
@@ -193,13 +193,8 @@ func files() []string {
 	return []string{"a", "b", "c", "d", "e", "f", "g", "h"}
 }
 
-// color returns "black" or "white" depending on the given indices of the ranks and file lists
-func color(fileIndex, rankIndex int) string {
-	if (rankIndex+fileIndex)%2 == 1 {
-		return "black"
-	}
-
-	return "white"
+func startpositions() []startPosition {
+	return startPositions
 }
 
 var pieceImgSrc = map[chess.Piece]string{

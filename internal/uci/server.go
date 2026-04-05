@@ -27,19 +27,30 @@ type Engine interface {
 	Stop()
 }
 
+// Renderer is an interface implemented by engines that can render the board
+type Renderer interface {
+	// Render is triggered when the "render" command is received
+	Render() string
+}
+
 // Server exposes an [Engine] to the given streams, typically [os.Stdout] and [os.Stdin]
 type Server struct {
 	r io.Reader
 	w io.Writer
 
-	h Engine
+	e      Engine
+	render Renderer
 }
 
 func NewServer(r io.Reader, w io.Writer, h Engine) *Server {
+	ext, _ := h.(Renderer)
+
 	return &Server{
 		r: r,
 		w: w,
-		h: h,
+
+		e:      h,
+		render: ext,
 	}
 }
 
@@ -68,24 +79,28 @@ func (s *Server) handleCommand(line string) error {
 		return s.respond("uciok")
 	}
 	if line == "ucinewgame" {
-		s.h.NewGame()
+		s.e.NewGame()
 		return nil
 	}
 	if line == "quit" {
 		return fmt.Errorf("server closed by user")
 	}
 	if line == "stop" {
-		s.h.Stop()
+		s.e.Stop()
 		return nil
 	}
 	if line == "isready" {
-		err := s.h.Ready()
+		err := s.e.Ready()
 
 		if err != nil {
 			return err
 		}
 
 		return s.respond("readyok")
+	}
+
+	if s.render != nil && line == "render" {
+		return s.respond(s.render.Render())
 	}
 
 	if strings.HasPrefix(line, "position") {
@@ -134,7 +149,7 @@ func (s *Server) handlePositionCommand(line string) error {
 		fen = chess.DefaultFen
 	}
 
-	return s.h.Position(fen, moves)
+	return s.e.Position(fen, moves)
 }
 
 func (s *Server) handleGoCommand(line string) error {
@@ -272,7 +287,7 @@ func (s *Server) handleGoCommand(line string) error {
 			// Special case: when any argument is perft call the perft instead
 			var res perftResult
 
-			res.total, res.moves, err = s.h.Perft(n)
+			res.total, res.moves, err = s.e.Perft(n)
 
 			if err != nil {
 				return err
@@ -302,7 +317,7 @@ func (s *Server) handleGoCommand(line string) error {
 
 	go func() {
 		var bm bestmove
-		bm.bestMove, bm.ponder = s.h.Go(opts)
+		bm.bestMove, bm.ponder = s.e.Go(opts)
 
 		s.respond(bm.String())
 	}()

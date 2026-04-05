@@ -1,6 +1,12 @@
 package chess
 
-func kingMoves(king BitBoard) BitBoard {
+var rookMoveMasks = initMoveMasks(rookMoveMask)
+var rookMoveLookup = initMoveLookupTable(rookMoveMask, rookMoveTargetsSlow, rookBits)
+
+var bishopMoveMasks = initMoveMasks(bishopMoveMask)
+var bishopMoveLookup = initMoveLookupTable(bishopMoveMask, bishopMoveTargetsSlow, bishopBits)
+
+func kingMoves(king bitBoard) bitBoard {
 	return king.Up() |
 		king.Down() |
 		king.Up().Left() |
@@ -11,7 +17,7 @@ func kingMoves(king BitBoard) BitBoard {
 		king.Right()
 }
 
-func knightMoves(knight BitBoard, same, _ BitBoard) BitBoard {
+func knightMoves(knight bitBoard, same, _ bitBoard) bitBoard {
 	targets := knight.Up().Up().Left() |
 		knight.Up().Up().Right() |
 
@@ -27,7 +33,7 @@ func knightMoves(knight BitBoard, same, _ BitBoard) BitBoard {
 	return targets &^ same
 }
 
-func rookMoves(sq, same, opposing BitBoard) BitBoard {
+func rookMoves(sq, same, opposing bitBoard) bitBoard {
 	all := same | opposing
 
 	mask := rookMoveMasks.get(sq)
@@ -35,12 +41,12 @@ func rookMoves(sq, same, opposing BitBoard) BitBoard {
 	relevant := mask & all
 
 	// moves contains friendly fire targets
-	moves := rookMoveTargets.get(sq).get(relevant)
+	moves := rookMoveLookup.get(sq).get(relevant)
 
 	return moves &^ same
 }
 
-func bishopMoves(sq BitBoard, same, opposing BitBoard) BitBoard {
+func bishopMoves(sq bitBoard, same, opposing bitBoard) bitBoard {
 	all := same | opposing
 
 	mask := bishopMoveMasks.get(sq)
@@ -48,19 +54,17 @@ func bishopMoves(sq BitBoard, same, opposing BitBoard) BitBoard {
 	relevant := mask & all
 
 	// moves contains friendly fire targets
-	moves := bishopMoveTargets.get(sq).get(relevant)
+	moves := bishopMoveLookup.get(sq).get(relevant)
 
 	return moves &^ same
 }
 
-func queenMoves(sq BitBoard, same, opposing BitBoard) BitBoard {
+func queenMoves(sq bitBoard, same, opposing bitBoard) bitBoard {
 	return rookMoves(sq, same, opposing) | bishopMoves(sq, same, opposing)
 }
 
-func whitePawnAttacks(pawn BitBoard) BitBoard {
-	return pawn.Up().Left() | pawn.Up().Right()
-}
-
-func blackPawnAttacks(pawn BitBoard) BitBoard {
+// opponentPawnAttacks returns a [bitBoard] of all squares an opponent pawn attacks, from the current player's
+// perspective
+func opponentPawnAttacks(pawn bitBoard) bitBoard {
 	return pawn.Down().Left() | pawn.Down().Right()
 }

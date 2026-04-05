@@ -1,45 +1,45 @@
 package chess
 
 type attackRay struct {
-	from BitBoard
-	ray  BitBoard
+	from bitBoard
+	ray  bitBoard
 }
 
 // ray datastructures containing the respective ray until the end of the board for each square
 var (
-	northRays     = squareLookup[BitBoard]{}
-	northEastRays = squareLookup[BitBoard]{}
-	eastRays      = squareLookup[BitBoard]{}
-	southEastRays = squareLookup[BitBoard]{}
-	southRays     = squareLookup[BitBoard]{}
-	northWestRays = squareLookup[BitBoard]{}
-	westRays      = squareLookup[BitBoard]{}
-	southWestRays = squareLookup[BitBoard]{}
+	northRays     = squareLookup[bitBoard]{}
+	northEastRays = squareLookup[bitBoard]{}
+	eastRays      = squareLookup[bitBoard]{}
+	southEastRays = squareLookup[bitBoard]{}
+	southRays     = squareLookup[bitBoard]{}
+	northWestRays = squareLookup[bitBoard]{}
+	westRays      = squareLookup[bitBoard]{}
+	southWestRays = squareLookup[bitBoard]{}
 )
 
 func init() {
 	type d struct {
-		f     func(BitBoard) BitBoard
-		store *squareLookup[BitBoard]
+		f     func(bitBoard) bitBoard
+		store *squareLookup[bitBoard]
 	}
 
 	ds := []d{
-		{BitBoard.Up, &northRays},
-		{BitBoard.DiagUp, &northEastRays},
-		{BitBoard.Right, &eastRays},
-		{BitBoard.DiagDown, &southEastRays},
-		{BitBoard.Down, &southRays},
-		{BitBoard.AntiDiagUp, &northWestRays},
-		{BitBoard.Left, &westRays},
-		{BitBoard.AntiDiagDown, &southWestRays},
+		{bitBoard.Up, &northRays},
+		{bitBoard.DiagUp, &northEastRays},
+		{bitBoard.Right, &eastRays},
+		{bitBoard.DiagDown, &southEastRays},
+		{bitBoard.Down, &southRays},
+		{bitBoard.AntiDiagUp, &northWestRays},
+		{bitBoard.Left, &westRays},
+		{bitBoard.AntiDiagDown, &southWestRays},
 	}
 
 	// generate rays in all queen move directions for each square
 	for _, d := range ds {
 		for i := range 64 {
-			sq := BitBoard(1 << i)
+			sq := bitBoard(1 << i)
 
-			ray := BitBoard(sq)
+			ray := bitBoard(sq)
 
 			for sq := sq; sq != 0; sq = d.f(sq) {
 				ray |= sq

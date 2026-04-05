@@ -25,8 +25,8 @@ const (
 	PromoteBishop
 	PromoteKnight
 
-	CastleLong
-	CastleShort
+	CastleQueen
+	CastleKing
 )
 
 const PromoteAny = PromoteQueen | PromoteRook | PromoteBishop | PromoteKnight
