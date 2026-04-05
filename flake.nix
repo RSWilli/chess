@@ -29,7 +29,7 @@
 
           graphviz # for pprof
           stockfish
-          rlwrap # for terminal command history inside stockfish
+          rlwrap # for terminal command history inside uci engine
         ];
 
         GO111MODULE = "on";
